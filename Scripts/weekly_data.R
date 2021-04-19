@@ -2,15 +2,12 @@ library(tidyverse)
 library(here)
 library(janitor)
 library(readxl)
+library(ICPIutilities)
 
 
-# functions --------------------------------------------------------------------
-fcn <- function(file){
-  df <- read_csv(file)
-  df <- mutate(df, source = file)
-}
 
-#read in dsp viz tables --------------------------------------------------------
+
+#read in weekly files  ---------------------------------------------------------
 weekly_extracts<-here("non-MER/Data/weekly")
 
 hfr_file<-list.files(weekly_extracts,pattern="HFR") 
@@ -36,7 +33,8 @@ hfr<-hfr %>%
          disaggregate=otherdisaggregate,
          community=sub_district,
          value=val) %>% 
-  mutate(table="hfr")
+  mutate(table="hfr") %>% 
+  filter(operatingunit=="South Africa")
 
 
 workforce<-workforce %>% 
@@ -45,8 +43,13 @@ workforce<-workforce %>%
          indicator=data_element,
          value=sum_of_value,
          baseline=sum_of_baseline_normal_operation) %>% 
-  mutate(table="workforce")
-
+  mutate(table="workforce",
+         mech_code=case_when(
+    partner=="Anova Health Institute" ~ "70310",
+    partner=="Broadreach" ~ "70287",
+    partner=="Maternal, Adolscent and Child Health (MatCH)" ~ "81902",
+    partner=="Right To Care, South Africa" ~ "70290",
+    partner=="Wits Reproductive Health& HIV Institute" ~ "70301"))
 
 
 siyenza<-siyenza %>% 
@@ -64,8 +67,11 @@ final_df<-bind_rows(hfr_syzatt,workforce) %>%
   filter(!is.na(value)) %>% 
   mutate(indicator2=indicator,
          value2=value) %>% 
-  spread(indicator2,value2)
+  spread(indicator2,value2) %>% 
+  rename_official() %>% 
+  select(-c(partner,mech_name))
+
   
 
-write_tsv(final_df,here("non-MER/Dataout/weekly","weekly_nonmer_data_combined_2021-04-02.txt"),na="")
+write_tsv(final_df,here("non-MER/Dataout/weekly","weekly_nonmer_data_combined_2021-04-02_v3.txt"),na="")
 
