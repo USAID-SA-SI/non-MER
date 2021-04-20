@@ -7,72 +7,87 @@ library(lubridate)
 
 
 #read in dsp viz tables --------------------------------------------------------
-monthly_extracts<-here("non-MER/Data/monthly")
+monthly_extracts<-here("Data/monthly")
 
-hfr_file<-list.files(mothly_extracts,pattern="HFR") 
-hfr<-read_excel(here("non-MER/Data/monthly",hfr_file),
+
+hfr_file<-list.files(monthly_extracts,pattern="HFR") 
+hfr<-read_excel(here("Data/monthly",hfr_file),
                      sheet="ForDataViz",
                 skip=14)
 
 workforce_file<-list.files(monthly_extracts,pattern="Workforce") 
-workforce<-read_excel(here("non-MER/Data/monthly",workforce_file),
+workforce<-read_excel(here("Data/monthly",workforce_file),
                 sheet="forDSPviz")
 
 
 siyenza_file<-list.files(monthly_extracts,pattern="Siyenza") 
-siyenza<-read_excel(here("non-MER/Data/monthly",siyenza_file),
+siyenza<-read_excel(here("Data/monthly",siyenza_file),
                       sheet="Raw data")
 
 
 covid19_file<-list.files(monthly_extracts,pattern="COVID") 
-covid<-read_excel(here("non-MER/Data/monthly",covid19_file),
+covid<-read_excel(here("Data/monthly",covid19_file),
                       sheet="ForDataViz")
 
 
 
 decanting_file<-list.files(monthly_extracts,pattern="Decanting") 
-decanting<-read_excel(here("non-MER/Data/monthly",decanting_file),
+decanting<-read_excel(here("Data/monthly",decanting_file),
                       sheet="ForDataViz")
 
 
 hivss_file<-list.files(monthly_extracts,pattern="HIVSS") 
-hivss<-read_excel(here("non-MER/Data/monthly",hivss_file),
+hivss<-read_excel(here("Data/monthly",hivss_file),
                   sheet="ForDataViz")
                   
                   
 index_file<-list.files(monthly_extracts,pattern="Index") 
-index<-read_excel(here("non-MER/Data/monthly",index_file),
+index<-read_excel(here("Data/monthly",index_file),
                 sheet="ForDataViz")
 
 tld_file<-list.files(monthly_extracts,pattern="TLD") 
-tld<-read_excel(here("non-MER/Data/monthly",tld_file),
+tld<-read_excel(here("Data/monthly",tld_file),
                     sheet="ForDataViz")
 
 
 ipc_file<-list.files(monthly_extracts,pattern="IPC") 
-ipc<-read_excel(here("non-MER/Data/monthly",ipc_file),
+ipc<-read_excel(here("Data/monthly",ipc_file),
                 sheet="ForDataViz")
 
-#transform ---------------------------------------------------------------------
+#transform weekly to monthly----------------------------------------------------
 
-hfr<-hfr %>% 
+hfr_snapshot<-hfr %>% 
   clean_names() %>% 
+  filter(indicator %in% c("cLTFU","Headcount","LATEMISSED","EARLYMISSED","TX_CURR_28",
+                          "TX_CURR_90","uLTFU")) %>% 
   rename(age=agecoarse,
          disaggregate=otherdisaggregate,
          community=sub_district,
          value=val) %>% 
-  mutate(table="hfr")
+  mutate(table="hfr",
+         mon_yr= format(date, "%Y-%m")) %>% 
+  group_by(mon_yr,orgunit,mech_code,indicator) %>% 
+  filter(date==max(date)) %>% 
+  ungroup() 
 
 
-workforce<-workforce %>% 
+hfr_cumulative<-hfr %>% 
   clean_names() %>% 
-  rename(psnu=district,
-         indicator=data_element,
-         value=sum_of_value,
-         baseline=sum_of_baseline_normal_operation) %>% 
-  mutate(table="workforce")
+  filter(indicator %in% c("HTS_TST","HTS_TST_POS","TX_NEW")) %>% 
+  rename(age=agecoarse,
+         disaggregate=otherdisaggregate,
+         community=sub_district,
+         value=val) %>% 
+  mutate(table="hfr",
+         mon_yr= format(date, "%Y-%m")) %>% 
+  group_by_if(is.character) %>% 
+  summarize_at(vars(value),sum,na.rm=TRUE)
 
 
+hfr_combined<-bind_rows(hfr_cumulative,hfr_snapshot) %>% 
+  select(-date)
+
+rm(hfr,hfr_cumulative,hfr_snapshot)
 
 siyenza<-siyenza %>% 
   clean_names() %>% 
@@ -80,10 +95,19 @@ siyenza<-siyenza %>%
   filter(siyenzasite=="Yes")
   
 
-hfr_syzatt<-hfr %>% 
+hfr_syzatt<-hfr_combined%>% 
   left_join(siyenza,by="orgunituid") 
 
 
+workforce<-workforce %>% #CHANGE TO AVG # IN THE MONTH!!!########
+  clean_names() %>% 
+  rename(psnu=district,
+         indicator=data_element,
+         value=sum_of_value,
+         baseline=sum_of_baseline_normal_operation) %>% 
+  mutate(table="workforce")
+
+# transform monthly -------------------------------------------------------------
 covid<-covid%>% 
   clean_names() %>% 
   rename(psnu=district) %>% 
@@ -126,15 +150,13 @@ ipc<-ipc %>%
   mutate(table="ipc")
 
 
+monthly<-bind_rows(covid,decanting,hivss,index,tld,ipc) %>% 
+  mutate(mon_yr= format(date, "%Y-%m")) %>% 
+  select(-date)
+
 #combine -----------------------------------------------------------------------
-final_df<-bind_rows(covid,decanting,hivss,index,ipc,tld) 
-  
-  
-  filter(!is.na(value)) %>% 
-  mutate(indicator2=indicator,
-         value2=value) %>% 
-  spread(indicator2,value2)
+final_df<-bind_rows(hfr_syzatt,monthly) 
   
 
-write_tsv(final_df,here("non-MER/Dataout/monthly","monthly_nonmer_data_combined_2021-04-02.txt"),na="")
+write_tsv(final_df,here("Dataout/monthly","monthly_nonmer_data_combined_2021-04-02.txt"),na="")
 
