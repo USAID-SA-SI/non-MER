@@ -13,6 +13,9 @@
 *.png
 *.twbx
 *.pptx
+*.tfl
+*.hyper
+
 
 #nothing from these folders
 AI/*
