@@ -15,6 +15,7 @@
 *.pptx
 *.tfl
 *.hyper
+*.twbx
 
 
 #nothing from these folders
@@ -22,3 +23,4 @@ AI/*
 GIS/*
 Images/*
 Graphics/*
+Dashboards/*
