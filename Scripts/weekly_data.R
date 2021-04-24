@@ -8,20 +8,20 @@ library(ICPIutilities)
 
 
 #read in weekly files  ---------------------------------------------------------
-weekly_extracts<-here("non-MER/Data/weekly")
+weekly_extracts<-here("Data/weekly")
 
 hfr_file<-list.files(weekly_extracts,pattern="HFR") 
-hfr<-read_excel(here("non-MER/Data/weekly",hfr_file),
+hfr<-read_excel(here("Data/weekly",hfr_file),
                      sheet="ForDataViz",
                 skip=14)
 
 workforce_file<-list.files(weekly_extracts,pattern="Workforce") 
-workforce<-read_excel(here("non-MER/Data/weekly",workforce_file),
+workforce<-read_excel(here("Data/weekly",workforce_file),
                 sheet="forDSPviz")
 
 
 siyenza_file<-list.files(weekly_extracts,pattern="Siyenza") 
-siyenza<-read_excel(here("non-MER/Data/weekly",siyenza_file),
+siyenza<-read_excel(here("Data/weekly",siyenza_file),
                       sheet="Raw data")
 
 
@@ -73,5 +73,5 @@ final_df<-bind_rows(hfr_syzatt,workforce) %>%
 
   
 
-write_tsv(final_df,here("non-MER/Dataout/weekly","weekly_nonmer_data_combined_2021-04-02_v3.txt"),na="")
+write_tsv(final_df,here("Dataout/weekly","weekly_nonmer_data_combined_2021-04-09_v1.2.txt"),na="")
 

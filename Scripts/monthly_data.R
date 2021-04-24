@@ -3,6 +3,7 @@ library(here)
 library(janitor)
 library(readxl)
 library(lubridate)
+library(ICPIutilities)
 
 
 
@@ -15,14 +16,19 @@ hfr<-read_excel(here("Data/monthly",hfr_file),
                      sheet="ForDataViz",
                 skip=14)
 
-workforce_file<-list.files(monthly_extracts,pattern="Workforce") 
-workforce<-read_excel(here("Data/monthly",workforce_file),
-                sheet="forDSPviz")
+# workforce_file<-list.files(monthly_extracts,pattern="Workforce") # NEEEEEED UPDATE ########
+# workforce<-read_excel(here("Data/monthly",workforce_file),
+#                 sheet="forDSPviz")
 
 
 siyenza_file<-list.files(monthly_extracts,pattern="Siyenza") 
 siyenza<-read_excel(here("Data/monthly",siyenza_file),
                       sheet="Raw data")
+
+
+core_file<-list.files(monthly_extracts,pattern="Core") 
+core<-read_excel(here("Data/monthly",core_file),
+                  sheet="Full_Data")
 
 
 covid19_file<-list.files(monthly_extracts,pattern="COVID") 
@@ -62,6 +68,7 @@ hfr_snapshot<-hfr %>%
                           "TX_CURR_90","uLTFU")) %>% 
   rename(age=agecoarse,
          disaggregate=otherdisaggregate,
+         snu1=snu,
          community=sub_district,
          value=val) %>% 
   mutate(table="hfr",
@@ -76,12 +83,14 @@ hfr_cumulative<-hfr %>%
   filter(indicator %in% c("HTS_TST","HTS_TST_POS","TX_NEW")) %>% 
   rename(age=agecoarse,
          disaggregate=otherdisaggregate,
+         snu1=snu,
          community=sub_district,
          value=val) %>% 
   mutate(table="hfr",
          mon_yr= format(date, "%Y-%m")) %>% 
   group_by_if(is.character) %>% 
-  summarize_at(vars(value),sum,na.rm=TRUE)
+  summarize_at(vars(value),sum,na.rm=TRUE) %>% 
+  ungroup()
 
 
 hfr_combined<-bind_rows(hfr_cumulative,hfr_snapshot) %>% 
@@ -99,47 +108,86 @@ hfr_syzatt<-hfr_combined%>%
   left_join(siyenza,by="orgunituid") 
 
 
-workforce<-workforce %>% #CHANGE TO AVG # IN THE MONTH!!!########
-  clean_names() %>% 
-  rename(psnu=district,
-         indicator=data_element,
-         value=sum_of_value,
-         baseline=sum_of_baseline_normal_operation) %>% 
-  mutate(table="workforce")
-
-# transform monthly -------------------------------------------------------------
-covid<-covid%>% 
-  clean_names() %>% 
-  rename(psnu=district) %>% 
-  mutate(table="covid-19")
-
-
-decanting<-decanting%>% 
-  clean_names() %>% 
-  rename(psnu=district,
-         community=subdistrict) %>% 
-  mutate(table="decanting")
-
-
-hivss<-hivss%>% 
-  clean_names() %>% 
-  rename(snu1=snu,
-         date=period) %>% 
-  mutate(table="hivss",
-         date=as.date(date))
+sitelist<-hfr_syzatt %>% 
+  select(orgunit,orgunituid) %>% 
+  distinct(orgunit,orgunituid)
 
 
 index<-index%>% 
   clean_names() %>% 
   rename(snu1=province,
-         psnu=district) %>% 
-  mutate(table="index")
+         psnu=district,
+         mech_code=mechanismid) %>% 
+  mutate(table="index",
+         mon_yr= format(date, "%Y-%m")) %>% 
+  group_by_if(is.character) %>% 
+  summarize_at(vars(value),sum,na.rm=TRUE) %>% 
+  ungroup()
+
+
+# workforce<-workforce %>% #CHANGE TO AVG # IN THE MONTH!!!########
+#   clean_names() %>% 
+#   rename(psnu=district,
+#          indicator=data_element,
+#          value=sum_of_value,
+#          baseline=sum_of_baseline_normal_operation) %>% 
+#   mutate(table="workforce")
+
+# transform monthly -------------------------------------------------------------
+
+# core<-core %>% ### NEEEEEED TO COME BACK HERE #####################
+#   clean_names()
+
+
+covid<-covid%>% 
+  clean_names() %>% 
+  rename(psnu=district,
+         indicator=data_element) %>% 
+  mutate(table="covid-19",
+         mech_code=case_when(
+           partner=="ANOVA" ~ "70310",
+           partner=="Broadreach" ~ "70287",
+           partner=="Maternal, Adolscent and Child Health (MatCH)" ~ "81902",
+           partner=="RIGHT TO CARE" ~ "70290",
+           partner=="WITS HEALTH CONSORTIUM (PTY) LTD" ~ "70301"),
+         snu1=case_when(
+           str_starts(psnu, "gp") ~ "gp Gauteng Province",
+           str_starts(psnu, "lp") ~ "lp Limpopo Province",
+           str_starts(psnu, "kz") ~ "kz KwaZulu-Natal Province",
+           str_starts(psnu, "mp") ~ "mp Mpumalanga Province",
+           str_starts(psnu, "ec") ~ "ec Eastern Cape Province",
+           str_starts(psnu, "fs") ~ "fs Free State Province",
+           str_starts(psnu, "wc") ~ "wc Westerm Cape Province")
+         )
+
+
+decanting<-decanting%>% 
+  clean_names() %>% 
+  rename(snu1=province,
+         psnu=district,
+         community=subdistrict,
+         orgunit=facility,
+         orgunituid=facilityuid,
+         mech_code=mechanismid) %>% 
+  mutate(table="decanting")
+
+
+## fix period to be date format
+hivss<-hivss%>% 
+  clean_names() %>% 
+  rename(snu1=snu,
+         date=period,
+         community=sub_district,
+         value=sum_of_value) %>% 
+  mutate(table="hivss",
+         date=mdy(date))
 
 
 tld<-tld %>% 
   clean_names() %>% 
   rename(snu1=snu,
-         community=subdistrict) %>% 
+         community=subdistrict,
+         age=agecoarse) %>% 
   mutate(table="tld")
 
 
@@ -147,16 +195,26 @@ ipc<-ipc %>%
   clean_names() %>% 
   rename(snu1=snu,
          community=sub_district) %>% 
-  mutate(table="ipc")
+  mutate(table="ipc") %>% 
+  left_join(sitelist,by="orgunit")
 
 
-monthly<-bind_rows(covid,decanting,hivss,index,tld,ipc) %>% 
+monthly<-bind_rows(covid,decanting,hivss,tld,ipc) %>% 
   mutate(mon_yr= format(date, "%Y-%m")) %>% 
   select(-date)
 
 #combine -----------------------------------------------------------------------
-final_df<-bind_rows(hfr_syzatt,monthly) 
-  
+final_df<-bind_rows(hfr_syzatt,monthly,index) %>% 
+  filter(!is.na(value)) %>% 
+  rename(facility=orgunit,
+         facilityuid=orgunituid) %>%
+  mutate(indicator2=indicator,
+         value2=value) %>%
+  spread(indicator2,value2) %>%
+  rename_official() %>%
+  select(-c(partner,mech_name))
 
-write_tsv(final_df,here("Dataout/monthly","monthly_nonmer_data_combined_2021-04-02.txt"),na="")
+
+
+write_tsv(final_df,here("Dataout/monthly","monthly_nonmer_data_combined_2021-04-09_v1.0.txt"),na="")
 
