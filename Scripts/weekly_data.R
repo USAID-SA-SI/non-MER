@@ -3,6 +3,7 @@ library(here)
 library(janitor)
 library(readxl)
 library(ICPIutilities)
+library(lubridate)
 
 
 
@@ -33,8 +34,13 @@ hfr<-hfr %>%
          disaggregate=otherdisaggregate,
          community=sub_district,
          value=val) %>% 
-  mutate(table="hfr") %>% 
+  mutate(table="hfr",
+         date=case_when(
+           indicator=="HTS_TST" ~ floor_date(date,"week",week_start = 5),
+           TRUE ~ date
+         )) %>% 
   filter(operatingunit=="South Africa")
+
 
 
 workforce<-workforce %>% 
@@ -71,7 +77,7 @@ final_df<-bind_rows(hfr_syzatt,workforce) %>%
   rename_official() %>% 
   select(-c(partner,mech_name))
 
-  
 
-write_tsv(final_df,here("Dataout/weekly","weekly_nonmer_data_combined_2021-04-09_v1.2.txt"),na="")
+
+write_tsv(final_df,here("Dataout/weekly","2021-04-16_weekly_nonmer_data_combined.txt"),na="")
 
