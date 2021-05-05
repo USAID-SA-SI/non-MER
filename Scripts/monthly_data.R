@@ -101,14 +101,12 @@ rm(hfr,hfr_cumulative,hfr_snapshot)
 siyenza<-siyenza %>% 
   clean_names() %>% 
   distinct(orgunituid,siyenza_start_date,siyenza_end_date,siyenzasite) %>% 
-  filter(siyenzasite=="Yes")
-  
-
-hfr_syzatt<-hfr_combined%>% 
-  left_join(siyenza,by="orgunituid") 
+  filter(siyenzasite=="Yes") %>% 
+  rename(facilityuid=orgunituid)
 
 
-sitelist<-hfr_syzatt %>% 
+
+sitelist<-hfr_combined %>% 
   select(orgunit,orgunituid) %>% 
   distinct(orgunit,orgunituid)
 
@@ -204,7 +202,7 @@ monthly<-bind_rows(covid,decanting,hivss,tld,ipc) %>%
   select(-date)
 
 #combine -----------------------------------------------------------------------
-final_df<-bind_rows(hfr_syzatt,monthly,index) %>% 
+final_df<-bind_rows(hfr_combined,monthly,index) %>% 
   filter(!is.na(value)) %>% 
   rename(facility=orgunit,
          facilityuid=orgunituid) %>%
@@ -212,9 +210,47 @@ final_df<-bind_rows(hfr_syzatt,monthly,index) %>%
          value2=value) %>%
   spread(indicator2,value2) %>%
   rename_official() %>%
-  select(-c(partner,mech_name))
+  select(-c(partner,mech_name)) %>% 
+  filter(mon_yr < "2021-04") %>% 
+  left_join(siyenza,by="facilityuid")
 
 
 
-write_tsv(final_df,here("Dataout/monthly","monthly_nonmer_data_combined_2021-04-09_v1.0.txt"),na="")
+write_tsv(final_df,here("Dataout/monthly","monthly_nonmer_data_combined_2021-04-09_v1.3.txt"),na="")
 
+
+# core interventions -----------------------------------------------------------
+ci_YN<-core %>% 
+  filter(!ValueYesNo=="(blank)") %>% 
+  mutate(val=case_when(
+    `Yes OrgUnit DistinctCount` > 0 ~ "1",
+    `No OrgUnit DistinctCount`>0 ~ "0",
+    is.na(`Yes OrgUnit DistinctCount`) & is.na(`No OrgUnit DistinctCount`) ~ ""
+  )) %>% 
+  select(-c(`Yes OrgUnit DistinctCount`,`No OrgUnit DistinctCount`,
+            `Total OrgUnit DistinctCount`,`Sum of ValueNumeric`,ValueYesNo)) %>% 
+  mutate(val=as.numeric(val))
+
+ci_val<-core %>% 
+  filter(ValueYesNo=="(blank)") %>% 
+  select(-c(`Yes OrgUnit DistinctCount`,`No OrgUnit DistinctCount`,`Total OrgUnit DistinctCount`)) %>% 
+  rename(val=`Sum of ValueNumeric`) %>% 
+  select(-ValueYesNo) 
+
+
+ci_bound<-bind_rows(ci_YN,ci_val)
+
+rm(ci_YN,ci_val)
+
+siyenza_att<-siyenza %>% 
+  clean_names() %>% 
+  distinct(orgunit,siyenza_start_date,siyenza_end_date,siyenzasite) %>% 
+  filter(siyenzasite=="Yes")
+
+final<-ci_bound %>% 
+  full_join(siyenza_att, by="orgunit") 
+
+
+filename<-paste("core_interventions", "_long", Sys.Date(), ".txt", sep="")
+
+write_tsv(final, file.path(here("Dataout/monthly"),filename,na=""))

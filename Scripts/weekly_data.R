@@ -23,7 +23,7 @@ workforce<-read_excel(here("Data/weekly",workforce_file),
 
 siyenza_file<-list.files(weekly_extracts,pattern="Siyenza") 
 siyenza<-read_excel(here("Data/weekly",siyenza_file),
-                      sheet="Raw data")
+                      sheet="Raw_Data")
 
 
 #transform ---------------------------------------------------------------------
@@ -39,7 +39,8 @@ hfr<-hfr %>%
            indicator=="HTS_TST" ~ floor_date(date,"week",week_start = 5),
            TRUE ~ date
          )) %>% 
-  filter(operatingunit=="South Africa")
+  filter(operatingunit=="South Africa",
+         date > "2020-12-28")
 
 
 
@@ -55,7 +56,8 @@ workforce<-workforce %>%
     partner=="Broadreach" ~ "70287",
     partner=="Maternal, Adolscent and Child Health (MatCH)" ~ "81902",
     partner=="Right To Care, South Africa" ~ "70290",
-    partner=="Wits Reproductive Health& HIV Institute" ~ "70301"))
+    partner=="Wits Reproductive Health& HIV Institute" ~ "70301")) %>% 
+  filter(date > "2020-12-28")
 
 
 siyenza<-siyenza %>% 
@@ -79,5 +81,5 @@ final_df<-bind_rows(hfr_syzatt,workforce) %>%
 
 
 
-write_tsv(final_df,here("Dataout/weekly","2021-04-16_weekly_nonmer_data_combined.txt"),na="")
+write_tsv(final_df,here("Dataout/weekly","2021-04-23_v1.1_weekly_nonmer_data_combined.txt"),na="")
 
