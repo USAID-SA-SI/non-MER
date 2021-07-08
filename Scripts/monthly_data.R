@@ -109,25 +109,10 @@ siyenza_att<-siyenza_att %>%
   rename(facilityuid=orgunituid)
 
 
-siyenza_snapshot<-siyenza %>% 
-  clean_names() %>% 
-  filter(indicator %in% c("TPT TX_CURR")) %>% 
-  rename(snu1=snu,
-         community=sub_district,
-         date=end_date,
-         value=sum_of_value)%>% 
-  mutate(table="siyenza",
-         mon_yr= format(date, "%Y-%m"),
-         operatingunit="South Africa") %>% 
-  group_by(mon_yr,orgunit,mech_code,indicator) %>% 
-  filter(date==max(date)) %>% 
-  ungroup() %>%  
-  select(-c(siyenzasite,date))
-
   
-siyenza_cumulative<-siyenza %>% 
+siyenza<-siyenza %>% 
   clean_names() %>% 
-  filter(indicator %in% c("TPT TX_NEW")) %>% 
+  filter(indicator %in% c("TPT TX_NEW", "TPT TX_CURR")) %>% 
   rename(snu1=snu,
          community=sub_district,
          date=end_date,
@@ -139,12 +124,6 @@ siyenza_cumulative<-siyenza %>%
   group_by_if(is.character) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   ungroup()
-
-
-siyenza_combined<-bind_rows(siyenza_cumulative,siyenza_snapshot)
-
-
-rm(siyenza,siyenza_cumulative,siyenza_snapshot)
 
 
 
@@ -257,7 +236,7 @@ targets<-mer %>%
   select(-period,-period_type)
 
 #combine -----------------------------------------------------------------------
-final_df<-bind_rows(hfr_combined,siyenza_combined,monthly,index,targets) %>% 
+final_df<-bind_rows(hfr_combined,monthly,index,targets,siyenza) %>% 
   filter(!is.na(value)) %>% 
   rename(facility=orgunit,
          facilityuid=orgunituid) %>%
@@ -271,7 +250,7 @@ final_df<-bind_rows(hfr_combined,siyenza_combined,monthly,index,targets) %>%
 
 
 
-write_tsv(final_df,here("Dataout/monthly","2021-05-31_monthly_nonmer_data_combined_v2.1.txt"),na="")
+write_tsv(final_df,here("Dataout/monthly","2021-05-31_monthly_nonmer_data_combined_v2.2.txt"),na="")
 
 
 
