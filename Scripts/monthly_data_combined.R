@@ -292,7 +292,7 @@ targets<-mer %>%
 
 #combine -----------------------------------------------------------------------
 final_df<-bind_rows(hfr_combined,monthly,index,targets,siyenza) %>% 
-  filter(!is.na(value)) %>% 
+  # filter(!is.na(value)) %>% 
   rename(facility=orgunit,
          facilityuid=orgunituid) %>%
   rename_official() %>%
@@ -306,5 +306,5 @@ final_df<-bind_rows(hfr_combined,monthly,index,targets,siyenza) %>%
 
 
 
-write_tsv(final_df,here("Dataout/monthly","2021-05-31_monthly_nonmer_data_combined_v3.3.txt"),na="")
+write_tsv(final_df,here("Dataout/monthly","2021-05-31_monthly_nonmer_data_combined_v3.5.txt"),na="")
 
