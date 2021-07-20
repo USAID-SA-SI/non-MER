@@ -5,9 +5,12 @@ library(readxl)
 library(lubridate)
 library(ICPIutilities)
 library(glamr)
+library(Wavelength)
 
 # global
 current_month<-"2021-05" # CHANGE EACH MONTH
+
+myuser<-"gsarfaty_SA"
 
 
 #read in dsp viz tables --------------------------------------------------------
@@ -75,6 +78,17 @@ core<-read_excel(here("Data/monthly",core_file),
 ref_file<-list.files(monthly_extracts,pattern="status")
 ref<-read_excel(here("Data/monthly",ref_file),
                 sheet="status")
+
+
+
+nhls_file<-list.files(monthly_extracts,pattern="NHLS")
+nhls_path<-here("Data/monthly",nhls_file)
+
+nhls<- nhls_path %>% 
+  excel_sheets() %>% 
+  set_names() %>% 
+  map_df(~read_excel(path = nhls_path), .id="sheet")
+  
 
 #transform weekly to monthly----------------------------------------------------
 
@@ -227,6 +241,36 @@ ipc<-ipc %>%
   mutate(table="ipc") %>% 
   left_join(sitelist,by="orgunit")
 
+
+sitelist_nhls<-pull_hierarchy("cDGPF739ZZr", myuser, mypwd(myuser)) %>% 
+  mutate(facility=str_sub(orgunit,4)) %>% 
+  select(-level,-countryname,-latitude,-longitude)
+
+
+nhls<-nhls %>% 
+  clean_names() %>% 
+  select(-province,-district,-sub_district) %>% 
+  rename(indicator=sheet,
+         sex=gender,
+         age=age_segment,
+         disaggregate=results_seg,
+         value=volumes,
+         facility=facility_name) %>% 
+  mutate(month_tested=as.character(month_tested),
+         month_tested=str_pad(month_tested, 2, side="left", pad = "0"),
+         table="NHLS",
+         facility=str_to_title(facility),
+         sex=case_when(
+           sex=="F" ~ "Female",
+           sex=="M" ~ "Male",
+           sex=="U" ~ "Unknown"
+         )) %>%
+  unite(mon_yr,year_tested,month_tested,sep="-",remove=TRUE) %>% 
+  left_join(sitelist_nhls,by="facility") %>% 
+  select(-facility)
+
+
+
 ci_YN<-core %>% 
   filter(!ValueYesNo=="(blank)") %>% 
   mutate(val=case_when(
@@ -301,10 +345,11 @@ final_df<-bind_rows(hfr_combined,monthly,index,targets,siyenza) %>%
   mutate(indicator2=indicator,
          value2=value) %>%
   spread(indicator2,value2) %>%
+  bind_rows(nhls) %>% 
   left_join(siyenza_att,by="facilityuid") %>% 
   clean_psnu()
 
 
 
-write_tsv(final_df,here("Dataout/monthly","2021-05-31_monthly_nonmer_data_combined_v3.5.txt"),na="")
+write_tsv(final_df,here("Dataout/monthly","2021-05-31_monthly_nonmer_data_combined_v4.0.txt"),na="")
 
