@@ -8,7 +8,7 @@ library(glamr)
 library(Wavelength)
 
 # global
-current_month<-"2021-05" # CHANGE EACH MONTH
+current_month<-"2021-06" # CHANGE EACH MONTH
 
 myuser<-"gsarfaty_SA"
 
@@ -324,15 +324,15 @@ targets<-mer %>%
   select(fundingagency,indicator,mech_code,operatingunit,primepartner,
          psnu,snu1,disaggregate,period,period_type,value) %>% 
   mutate(#indicator=paste(indicator,period,period_type,sep="_"), no longer necessary
-         table="mer",
-         indicator=case_when(
-           indicator=="TX_CURR" ~ "TX_CURR_28",
-           indicator=="HTS_SELF" ~ "Number of HIVSS test kits distributed",
-           indicator=="HTS_INDEX" ~ "INDEX_TESTED",
-           TRUE ~ indicator
-         ),
-         mon_yr=current_month)
-  # select(-period,-period_type) #keep this for now to do t ach.
+    table="mer",
+    indicator=case_when(
+      indicator=="TX_CURR" ~ "TX_CURR_28",
+      indicator=="HTS_SELF" ~ "Number of HIVSS test kits distributed",
+      indicator=="HTS_INDEX" ~ "INDEX_TESTED",
+      TRUE ~ indicator
+    ),
+    mon_yr=current_month)
+
 
 #combine -----------------------------------------------------------------------
 final_df<-bind_rows(hfr_combined,monthly,index,targets,siyenza) %>% 
@@ -340,7 +340,7 @@ final_df<-bind_rows(hfr_combined,monthly,index,targets,siyenza) %>%
   rename(facility=orgunit,
          facilityuid=orgunituid) %>%
   rename_official() %>%
-  filter(mon_yr <= current_month & mon_yr >"2020-12") %>% 
+  filter(mon_yr <= current_month & mon_yr >"2020-11") %>% 
   select(-c(partner,mech_name)) %>% 
   mutate(indicator2=indicator,
          value2=value) %>%
@@ -351,5 +351,5 @@ final_df<-bind_rows(hfr_combined,monthly,index,targets,siyenza) %>%
 
 
 
-write_tsv(final_df,here("Dataout/monthly","2021-05-31_monthly_nonmer_data_combined_v4.0.txt"),na="")
+write_tsv(final_df,here("Dataout/monthly","2021-06-30_monthly_nonmer_data_combined_v1.0.txt"),na="")
 

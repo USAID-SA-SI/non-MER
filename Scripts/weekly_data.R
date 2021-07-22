@@ -81,5 +81,5 @@ final_df<-bind_rows(hfr_syzatt,workforce) %>%
 
 
 
-write_tsv(final_df,here("Dataout/weekly","2021-07-02_v1.0_weekly_nonmer_data_combined.txt"),na="")
+write_tsv(final_df,here("Dataout/weekly","2021-07-09_v1.0_weekly_nonmer_data_combined.txt"),na="")
 
