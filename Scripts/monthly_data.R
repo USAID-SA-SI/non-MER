@@ -307,7 +307,7 @@ final<-ci_bound %>%
     str_detect(indicator, "Community ART") ~ "Linkage/ Retention",
     TRUE ~ `Program Area/ Element`
   )) %>% 
-  filter(End_Date <as.Date("2021-06-01"))
+  filter(End_Date <as.Date("2021-07-01"))
   
 
 
@@ -317,3 +317,7 @@ filename<-paste("core_interventions", "_long", Sys.Date(), ".txt", sep="")
 write_tsv(final, file.path(here("Dataout/monthly"),filename,na=""))
 
 
+
+june_rtc<-ci_bound %>% 
+  filter(partner=="RIGHT TO CARE",
+  End_Date==as.Date("2021-06-30"))
