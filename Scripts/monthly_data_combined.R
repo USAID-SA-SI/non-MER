@@ -3,7 +3,7 @@ library(here)
 library(janitor)
 library(readxl)
 library(lubridate)
-library(ICPIutilities)
+library(gophr)
 library(glamr)
 library(Wavelength)
 
@@ -132,7 +132,8 @@ hfr_cumulative<-hfr %>%
   mutate(table="hfr",
          mon_yr= format(date, "%Y-%m")) %>% 
   group_by_if(is.character) %>% 
-  summarize_at(vars(value),sum,na.rm=TRUE) %>% 
+  summarize_at(vars(value),sum,na.rm=TRUE) %>%  
+  filter(mon_yr>"2020-12") %>% 
   ungroup()
 
 
@@ -412,5 +413,5 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza) %>%
 
 
 
-write_tsv(final_df,here("Dataout/monthly","2021-07-31_monthly_nonmer_data_combined_v3.0.txt"),na="")
+write_tsv(final_df,here("Dataout/monthly","2021-07-31_monthly_nonmer_data_combined_v3.2.txt"),na="")
 
