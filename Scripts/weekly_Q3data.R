@@ -2,8 +2,9 @@ library(tidyverse)
 library(here)
 library(janitor)
 library(readxl)
-library(ICPIutilities)
 library(lubridate)
+library(gophr)
+
 
 
 
@@ -81,5 +82,5 @@ final_df<-bind_rows(hfr_syzatt,workforce) %>%
 
 
 
-write_tsv(final_df,here("Dataout/weekly","2021-08-20_v1.0_weekly_nonmer_data_combined.txt"),na="")
+write_tsv(final_df,here("Dataout/weekly","2021-09-24_v1.0_weekly_nonmer_data_combined.txt"),na="")
 
