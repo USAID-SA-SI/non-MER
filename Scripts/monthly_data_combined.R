@@ -7,10 +7,12 @@ library(gophr)
 library(glamr)
 library(Wavelength)
 
+
+
 # global
-current_month<-"2021-07" # CHANGE EACH MONTH
-last_month<- "2021-06" #CHANGE EACH MONTH
-current_mo_minus_3<- "2021-04" #CHANGE EACH MONTH
+current_month<-"2021-09" # CHANGE EACH MONTH
+last_month<- "2021-08" #CHANGE EACH MONTH
+current_mo_minus_3<- "2021-06" #CHANGE EACH MONTH
 lastQmo<-"2021-06" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"gsarfaty_SA"
@@ -93,15 +95,14 @@ nhls_c<- nhls_path_current %>%
           path = nhls_path_current, 
           .id="sheet")
 
-nhls_file_historic<-list.files(monthly_extracts,pattern=paste0(last_month, "_NHLS"))
+nhls_file_historic<-list.files(monthly_extracts,pattern=paste0(last_month, "_nhls"))
 nhls_path_historic<-here("Data/monthly",nhls_file_historic)
 
-nhls_h<- nhls_path_historic %>% 
-  excel_sheets() %>% 
-  set_names() %>%
-  map_dfr(read_excel,
-          path = nhls_path_historic, 
-          .id="sheet")
+nhls_h<-read_tsv(nhls_path_historic) 
+
+vl_rjection_file<-list.files(monthly_extracts,pattern="Rejections")
+vl_rejections<-read_delim(here("Data/monthly",vl_rjection_file),
+                        delim="|")
 
 #transform weekly to monthly----------------------------------------------------
 
@@ -245,6 +246,7 @@ tld<-tld %>%
   rename(snu1=snu,
          community=subdistrict,
          age=agecoarse) %>% 
+  filter(age=="All Age") %>% 
   mutate(table="tld")
 
 
@@ -255,7 +257,7 @@ ipc<-ipc %>%
   mutate(table="ipc") %>% 
   left_join(sitelist,by="orgunit")
 
-
+# NHLS -------------------------------------------------------------------------
 sitelist_nhls<-pull_hierarchy("cDGPF739ZZr", myuser, mypwd(myuser)) %>%
   mutate(facility=str_sub(orgunit,4)) %>%
   select(-level,-countryname,-latitude,-longitude)
@@ -299,41 +301,50 @@ nhls_c<-nhls_c %>%
   # rename(facility=orgunit,
   #        facilityuid=orgunituid) #add back in once site list match resolved
 
+
 nhls_h<-nhls_h %>% 
-  clean_names() %>% 
-  # select(-province,-district,-sub_district) %>% #add back in once site list match resolved
-  rename(indicator=sheet,
-         sex=gender,
-         age=age_segment,
-         disaggregate=results_seg,
-         value=volumes,
-         facility_n=facility_name) %>% #change this back to facility once site list match resolved
-  mutate(month_tested=as.character(month_tested),
-         month_tested=str_pad(month_tested, 2, side="left", pad = "0"),
-         table="NHLS",
-         district=str_to_title(district),
-         facility_n=str_to_title(facility_n), #change this back to facility once site list match resolved
-         sex=case_when(
-           sex=="F" ~ "Female",
-           sex=="M" ~ "Male",
-           sex=="U" ~ "Unknown"
-         )) %>%
-  unite(mon_yr,year_tested,month_tested,sep="-",remove=TRUE) %>% 
-  filter(!is.na(province)) %>% 
-  select(-province) %>% 
-  left_join(nhls_districts,by=c("district"="health_district")) %>% 
-  select(-district) %>% 
-  left_join(sitelist_district,by="psnuuid") %>% 
   filter(mon_yr <= current_mo_minus_3) 
-# left_join(sitelist_nhls,by=c("facility_n"="facility")) %>% #change this back to facility once site list match resolved
-# select(-facility) %>% #add back in once site list match resolved
-# rename(facility=orgunit,
-#        facilityuid=orgunituid) #add back in once site list match resolved
 
 
 nhls<-bind_rows(nhls_c,nhls_h)
+  
+
+#export combined nhls file for use next month
+write_tsv(nhls,here("Data/monthly",paste0(current_month,"_nhls_combined_output.txt")),na="")
 
 
+
+vl_rejections<-vl_rejections %>% 
+  clean_names() %>% 
+  filter(vl_results=="REJCT") %>% 
+  select(8:12,15,19:20) %>% 
+  rename(district=district_name,
+         facility_n=facility_name,
+         disaggregate=rejection_reason1,
+         age=age_category) %>% 
+  mutate(month1=as.character(month1),
+         year1=as.character(year1),
+         month1=str_pad(month1, 2, side="left", pad = "0"),
+         table="NHLS",
+         district=str_to_title(district),
+         facility_n=str_to_title(facility_n),
+         disaggregate=str_to_lower(disaggregate),
+         disaggregate=str_replace_all(disaggregate," ","_"),
+         indicator="VL_rejection") %>% 
+  unite(mon_yr,year1,month1,sep="-",remove=TRUE) %>% 
+  select(-sub_district_name) %>% 
+  left_join(nhls_districts,by=c("district"="health_district")) %>% 
+  select(-district, -test_method_name) %>% 
+  left_join(sitelist_district,by="psnuuid") %>% 
+  group_by_if(is.character) %>% 
+  count() %>% 
+  summarize(value = sum(n, na.rm = T)) %>% 
+  ungroup() %>% 
+  rename(value=n)
+  
+
+
+#core interventions ------------------------------------------------------------
 ci_YN<-core %>% 
   filter(!ValueYesNo=="(blank)") %>% 
   mutate(val=case_when(
@@ -378,6 +389,7 @@ monthly<-bind_rows(covid,decanting,hivss,tld,ipc,ci_bound) %>%
 
 # MER TARGETS ------------------------------------------------------------------
 targets<-mer %>% 
+  filter(fiscal_year=="2021") %>% 
   reshape_msd(clean = TRUE) %>% 
   filter(period_type %in% c("targets","cumulative"),
          indicator %in% c("HTS_TST","HTS_TST_POS","HTS_INDEX","HTS_SELF","TX_NEW","TX_CURR"),
@@ -392,7 +404,10 @@ targets<-mer %>%
       indicator=="HTS_SELF" ~ "Number of HIVSS test kits distributed",
       indicator=="HTS_INDEX" ~ "INDEX_TESTED",
       TRUE ~ indicator
-    ))
+    )) %>% 
+  group_by_if(is.character) %>% 
+  summarize(value = sum(value, na.rm = T)) %>% 
+  ungroup()
 
 
 #combine -----------------------------------------------------------------------
@@ -407,11 +422,14 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza) %>%
   mutate(indicator2=indicator,
          value2=value) %>%
   spread(indicator2,value2) %>%
-  bind_rows(nhls) %>% 
+  bind_rows(nhls,vl_rejections) %>% 
   left_join(siyenza_att,by="facilityuid") %>% 
   clean_psnu()
 
 
 
-write_tsv(final_df,here("Dataout/monthly","2021-07-31_monthly_nonmer_data_combined_v3.2.txt"),na="")
+write_tsv(final_df,here("Dataout/monthly","2021-09-30_monthly_nonmer_data_combined_v1.0.txt"),na="")
+
+
+
 
