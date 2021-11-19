@@ -10,10 +10,10 @@ library(Wavelength)
 
 
 # global
-current_month<-"2021-09" # CHANGE EACH MONTH
-last_month<- "2021-08" #CHANGE EACH MONTH
-current_mo_minus_3<- "2021-06" #CHANGE EACH MONTH
-lastQmo<-"2021-06" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
+current_month<-"2021-10" # CHANGE EACH MONTH
+last_month<- "2021-09" #CHANGE EACH MONTH
+current_mo_minus_3<- "2021-07" #CHANGE EACH MONTH
+lastQmo<-"2021-09" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"gsarfaty_SA"
 
@@ -77,12 +77,14 @@ ipc<-read_excel(here("Data/monthly",ipc_file),
 
 
 core_file<-list.files(monthly_extracts,pattern="Core") 
-core<-read_excel(here("Data/monthly",core_file),
-                 sheet="Full_Data")
-# 
-# ref_file<-list.files(monthly_extracts,pattern="status")
-# ref<-read_excel(here("Data/monthly",ref_file),
-#                 sheet="status")
+
+
+ci_YN<-read_excel(here("Data/monthly",core_file),
+                  sheet="Yes_No Wide data")
+
+
+ci_val<-read_excel(here("Data/monthly",core_file),
+                   sheet="Numeric Wide data")
 
 
 nhls_file_current<-list.files(monthly_extracts,pattern=paste0(current_month, "_NHLS"))
@@ -227,7 +229,8 @@ decanting<-decanting%>%
          orgunit=facility,
          orgunituid=facilityuid,
          mech_code=mechanismid) %>% 
-  mutate(table="decanting")
+  mutate(table="decanting",
+         value=as.numeric(value))
 
 
 ## fix period to be date format
@@ -331,6 +334,7 @@ vl_rejections<-vl_rejections %>%
          disaggregate=str_to_lower(disaggregate),
          disaggregate=str_replace_all(disaggregate," ","_"),
          indicator="VL_rejection") %>% 
+  filter(test_method_name=="HIV VIRAL LOAD") %>% 
   unite(mon_yr,year1,month1,sep="-",remove=TRUE) %>% 
   select(-sub_district_name) %>% 
   left_join(nhls_districts,by=c("district"="health_district")) %>% 
@@ -339,43 +343,42 @@ vl_rejections<-vl_rejections %>%
   group_by_if(is.character) %>% 
   count() %>% 
   summarize(value = sum(n, na.rm = T)) %>% 
-  ungroup() %>% 
-  rename(value=n)
+  ungroup()
   
 
 
 #core interventions ------------------------------------------------------------
-ci_YN<-core %>% 
-  filter(!ValueYesNo=="(blank)") %>% 
-  mutate(val=case_when(
-    `Yes OrgUnit DistinctCount` > 0 ~ "1",
-    `No OrgUnit DistinctCount`>0 ~ "0",
-    is.na(`Yes OrgUnit DistinctCount`) & is.na(`No OrgUnit DistinctCount`) ~ ""
+ci_YN<-ci_YN%>% 
+  gather(date,value,14:40) %>% 
+  filter(!is.na(value)) %>%
+  mutate(value=case_when(
+    value=="Yes" ~ "1",
+    value=="YES" ~ "1",
+    value=="yes" ~ "1",
+    value=="No" ~ "0",
+    value=="NO" ~ "0",
+    value=="no" ~ "0",
   )) %>% 
-  select(-c(`Yes OrgUnit DistinctCount`,`No OrgUnit DistinctCount`,
-            `Total OrgUnit DistinctCount`,`Sum of ValueNumeric`,ValueYesNo)) %>% 
-  mutate(val=as.numeric(val))
+  mutate(value=as.numeric(value)) %>% 
+  filter(!is.na(value))
 
-ci_val<-core %>% 
-  filter(ValueYesNo=="(blank)") %>% 
-  select(-c(`Yes OrgUnit DistinctCount`,`No OrgUnit DistinctCount`,`Total OrgUnit DistinctCount`)) %>% 
-  rename(val=`Sum of ValueNumeric`) %>% 
-  select(-ValueYesNo) 
+
+ci_val<-ci_val %>% 
+  gather(date,value,15:41) %>% 
+  mutate(value=as.numeric(value)) %>% 
+  filter(!is.na(value))
 
 
 ci_bound<-bind_rows(ci_YN,ci_val) %>% 
-  # left_join(ref, by="indicator") %>% 
   clean_names() %>% 
   mutate(program_area_element=case_when(
     indicator=="Does the facility meet the minimum standards for ethical implementation of index testing?" ~ "HTS",
     str_detect(indicator, "Synch") ~ "Decanting",
     str_detect(indicator, "Community ART") ~ "Linkage/ Retention",
     TRUE ~ program_area_element),
-    table="core_interventions",
-    operatingunit="South Africa") %>% 
-  rename(value=val,
-         community=sub_district,
-         date=end_date)
+    table="core_interventions")%>% 
+  rename(community=sub_district) %>% 
+  mutate(date=mdy(date))
 
 
 rm(ci_YN,ci_val)
@@ -409,7 +412,6 @@ targets<-mer %>%
   summarize(value = sum(value, na.rm = T)) %>% 
   ungroup()
 
-
 #combine -----------------------------------------------------------------------
 final_df<-bind_rows(hfr_combined,monthly,index,siyenza) %>% 
   # filter(!is.na(value)) %>%
@@ -428,7 +430,7 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza) %>%
 
 
 
-write_tsv(final_df,here("Dataout/monthly","2021-09-30_monthly_nonmer_data_combined_v1.0.txt"),na="")
+write_tsv(final_df,here("Dataout/monthly","2021-09-30_monthly_nonmer_data_combined_v1.3.txt"),na="")
 
 
 
