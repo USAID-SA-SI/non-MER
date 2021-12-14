@@ -50,7 +50,9 @@ covid19_file<-list.files(monthly_extracts,pattern="COVID")
 covid<-read_excel(here("Data/monthly",covid19_file),
                       sheet="ForDataViz")
 
-
+usaid_arpa_file<-list.files(monthly_extracts,pattern="ARPA")
+usaid_arpa<-read_excel(here("Data/monthly",usaid_arpa_file),
+                  sheet="LongData")
 
 decanting_file<-list.files(monthly_extracts,pattern="Decanting") 
 decanting<-read_excel(here("Data/monthly",decanting_file),
@@ -121,7 +123,11 @@ hfr_snapshot<-hfr %>%
          mon_yr= format(date, "%Y-%m")) %>% 
   group_by(mon_yr,orgunit,mech_code,indicator) %>% 
   filter(date==max(date)) %>% 
-  ungroup() 
+  ungroup() %>% 
+  mutate(period=quarter(date, with_year = TRUE, fiscal_start = 10),
+         period=stringr::str_remove(period, "20"),
+         period=str_replace_all(period,"\\.","Q"),
+         period=paste0("FY",period))
 
 
 hfr_cumulative<-hfr %>% 
@@ -132,17 +138,24 @@ hfr_cumulative<-hfr %>%
          snu1=snu,
          community=sub_district,
          value=val) %>% 
+  mutate(period=quarter(date, with_year = TRUE, fiscal_start = 10),
+         period=stringr::str_remove(period, "20"),
+         period=str_replace_all(period,"\\.","Q"),
+         period=paste0("FY",period)) %>% 
   mutate(table="hfr",
          mon_yr= format(date, "%Y-%m")) %>% 
   group_by_if(is.character) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>%  
   filter(mon_yr>"2020-12") %>% 
-  ungroup()
+  ungroup() 
+
+
 
 
 hfr_combined<-bind_rows(hfr_cumulative,hfr_snapshot) %>% 
-  select(-date) %>% 
-  mutate(period_type="monthly")
+  mutate(period_type="monthly") %>% 
+  select(-date)  
+
 
 rm(hfr,hfr_cumulative,hfr_snapshot)
 
@@ -163,6 +176,10 @@ siyenza<-siyenza %>%
   mutate(table="siyenza",
          mon_yr= format(date, "%Y-%m"),
          operatingunit="South Africa")%>%
+  mutate(period=quarter(date, with_year = TRUE, fiscal_start = 10),
+         period=stringr::str_remove(period, "20"),
+         period=str_replace_all(period,"\\.","Q"),
+         period=paste0("FY",period)) %>% 
   select(-c(siyenzasite,date)) %>% 
   group_by_if(is.character) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
@@ -182,6 +199,10 @@ index<-index%>%
          mech_code=mechanismid) %>% 
   mutate(table="index",
          mon_yr= format(date, "%Y-%m")) %>% 
+  mutate(period=quarter(date, with_year = TRUE, fiscal_start = 10),
+         period=stringr::str_remove(period, "20"),
+         period=str_replace_all(period,"\\.","Q"),
+         period=paste0("FY",period)) %>% 
   group_by_if(is.character) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   ungroup()
@@ -220,6 +241,79 @@ covid<-covid%>%
            str_starts(psnu, "wc") ~ "wc Westerm Cape Province")
          )
 
+usaid_arpa<-usaid_arpa %>% 
+  clean_names() %>% 
+  rename(indicator=data_element,
+         indicator_code=dataelement_code,
+         numeratordenom=num_denom) %>% 
+  mutate(disaggregate=case_when(
+    disaggregate=="(blank)" & numeratordenom=="Numerator" ~ "Total Numerator",
+    disaggregate=="(blank)" & numeratordenom=="Denominator" ~ "Total Denominator",
+    TRUE ~ disaggregate
+  )) %>% 
+  mutate(standardizeddisaggregate=case_when(
+    disaggregate=="Total Numerator" ~ "Total Numerator",
+    disaggregate=="Total Denominator" ~ "Total Denominator",
+    disaggregate=="Male" | disaggregate=="Female" | disaggregate=="Unknown sex" ~ "Sex",
+    disaggregate=="Case management for severely/critically ill patients" | 
+      disaggregate=="Other case management training" ~ "Training",
+    disaggregate=="Oxygen concentrators" | disaggregate=="Pressure Swing Absorption (PSA) plant" |
+      disaggregate=="Pulse oximeters" ~ "Oxygen-related commodity",
+    indicator_code=="CoOp_6.1" & !disaggregate=="Total Numerator" ~ "Result Areas",
+    disaggregate=="Healthcare worker" | disaggregate=="Non-Healthcare worker" ~ "Work cadre",
+    indicator_code=="RCCE_1.1" & !disaggregate=="Total Numerator" ~ "Mass media type",
+    indicator_code=="VACC_0.1" & !disaggregate=="Total Numerator" & !disaggregate=="Sex" ~ "Vaccine brand",
+    indicator_code=="VACC_0.2" & disaggregate=="Direct" | disaggregate=="Indirect" ~ "Type of USAID support",
+    indicator_code=="VACC_0.4" & !disaggregate=="Total Numerator" & !disaggregate=="Sex" ~ "Vaccine brand",
+    indicator_code=="VACC_0.5" & !disaggregate=="Total Numerator" ~ "Mass media type",
+    indicator_code=="VACC_0.6" & !disaggregate=="Total Numerator" ~ "Types",
+    disaggregate=="Establishing surveillance systems" | disaggregate=="Monitoring and responding to AEFIs" |
+      disaggregate=="Monitoring and responding to adverse events of special interest" |
+      disaggregate=="Safety data management systems" | disaggregate=="COVID-19 vaccine safety communication" ~ "Topic areas",
+    disaggregate=="Developed" | disaggregate=="Adapted" | disaggregate=="Disseminated" ~ "USAID Support",
+    indicator_code=="VACC_0.8" ~ "Check as applicable",
+    TRUE ~ disaggregate
+  ),
+  sex=case_when(
+    standardizeddisaggregate=="Sex" ~ disaggregate,
+    TRUE ~ ""),
+  mech_code=case_when(
+    partner=="ANOVA" ~ "70310",
+    partner=="EQUIP" ~ "160610",
+    partner=="GETF" ~ "83001",
+    partner=="Guidehouse" ~ "18321",
+    TRUE ~ ""
+  ))
+  
+  
+usaid_arpa_YN<-usaid_arpa %>% 
+  select(-value) %>% 
+  filter(indicator_code=="VACC_0.8",
+         !value_text=="(blank)") %>% 
+  mutate(value=case_when(
+    value_text=="Yes" ~ "1",
+    TRUE ~ "0"
+  )) %>% 
+  select(-value_text) %>% 
+  mutate(value=as.numeric(value))
+  
+
+
+usaid_arpa_val<-usaid_arpa %>% 
+  select(-value_text) %>% 
+  filter(!is.na(value)) 
+  
+
+usaid_arpa_combined<-bind_rows(usaid_arpa_val,usaid_arpa_YN) %>% 
+  mutate(period=quarter(date, with_year = TRUE, fiscal_start = 10),
+         period=stringr::str_remove(period, "20"),
+         period=str_replace_all(period,"\\.","Q"),
+         period=paste0("FY",period)) %>% 
+  mutate(table="usaid arpa",
+         mon_yr= format(date, "%Y-%m")) %>% 
+  select(-date)
+
+
 
 decanting<-decanting%>% 
   clean_names() %>% 
@@ -241,7 +335,9 @@ hivss<-hivss%>%
          community=sub_district,
          value=sum_of_value) %>% 
   mutate(table="hivss",
-         date=mdy(date))
+         date=mdy(date)) %>% 
+  select(-month)
+  
 
 
 tld<-tld %>% 
@@ -305,8 +401,8 @@ nhls_c<-nhls_c %>%
   #        facilityuid=orgunituid) #add back in once site list match resolved
 
 
-nhls_h<-nhls_h %>% 
-  filter(mon_yr <= current_mo_minus_3) 
+nhls_h<-nhls_h %>%
+  filter(mon_yr <= current_mo_minus_3)
 
 
 nhls<-bind_rows(nhls_c,nhls_h)
@@ -320,10 +416,11 @@ write_tsv(nhls,here("Data/monthly",paste0(current_month,"_nhls_combined_output.t
 vl_rejections<-vl_rejections %>% 
   clean_names() %>% 
   filter(vl_results=="REJCT") %>% 
-  select(8:12,15,19:20) %>% 
+  select(8:12,15,16,19:20) %>% 
   rename(district=district_name,
          facility_n=facility_name,
          disaggregate=rejection_reason1,
+         otherdisaggregate=rejection_description,
          age=age_category) %>% 
   mutate(month1=as.character(month1),
          year1=as.character(year1),
@@ -385,23 +482,25 @@ rm(ci_YN,ci_val)
 
 
 monthly<-bind_rows(covid,decanting,hivss,tld,ipc,ci_bound) %>% 
-  mutate(mon_yr= format(date, "%Y-%m")) %>% 
+  mutate(period=quarter(date, with_year = TRUE, fiscal_start = 10),
+         period=stringr::str_remove(period, "20"),
+         period=str_replace_all(period,"\\.","Q"),
+         period=paste0("FY",period),
+         mon_yr= format(date, "%Y-%m")) %>% 
   select(-date)
 
 
 
 # MER TARGETS ------------------------------------------------------------------
 targets<-mer %>% 
-  filter(fiscal_year=="2021") %>% 
+  filter(fiscal_year %in% c("2021","2022")) %>% 
   reshape_msd(clean = TRUE) %>% 
-  filter(period_type %in% c("targets","cumulative"),
-         indicator %in% c("HTS_TST","HTS_TST_POS","HTS_INDEX","HTS_SELF","TX_NEW","TX_CURR"),
+  filter(indicator %in% c("HTS_TST","HTS_TST_POS","HTS_INDEX","HTS_SELF","TX_NEW","TX_CURR"),
          fundingagency=="USAID",
          standardizeddisaggregate=="Total Numerator") %>% 
   select(fundingagency,indicator,mech_code,operatingunit,primepartner,
          psnu,snu1,disaggregate,period,period_type,value) %>% 
-  mutate(#indicator=paste(indicator,period,period_type,sep="_"), no longer necessary
-    table="mer",
+  mutate(table="mer",
     indicator=case_when(
       indicator=="TX_CURR" ~ "TX_CURR_28",
       indicator=="HTS_SELF" ~ "Number of HIVSS test kits distributed",
@@ -413,8 +512,8 @@ targets<-mer %>%
   ungroup()
 
 #combine -----------------------------------------------------------------------
-final_df<-bind_rows(hfr_combined,monthly,index,siyenza) %>% 
-  # filter(!is.na(value)) %>%
+final_df<-bind_rows(hfr_combined,monthly,index,siyenza,usaid_arpa_combined) %>% 
+  filter(!is.na(value)) %>%
   rename(facility=orgunit,
          facilityuid=orgunituid) %>%
   filter(mon_yr <= current_month & mon_yr >"2020-11") %>% 
@@ -430,7 +529,7 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza) %>%
 
 
 
-write_tsv(final_df,here("Dataout/monthly","2021-09-30_monthly_nonmer_data_combined_v1.3.txt"),na="")
+write_tsv(final_df,here("Dataout/monthly","2021-10-31_monthly_nonmer_data_combined_v1.6.txt"),na="")
 
 
 
