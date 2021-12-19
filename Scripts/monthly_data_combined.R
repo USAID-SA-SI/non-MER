@@ -10,9 +10,10 @@ library(Wavelength)
 
 
 # global
-current_month<-"2021-10" # CHANGE EACH MONTH
-last_month<- "2021-09" #CHANGE EACH MONTH
-current_mo_minus_3<- "2021-07" #CHANGE EACH MONTH
+current_month<-"2021-11" # CHANGE EACH MONTH
+current_month_full<-"2021-11-30" # CHANGE EACH MONTH
+last_month<- "2021-10" #CHANGE EACH MONTH
+current_mo_minus_3<- "2021-08" #CHANGE EACH MONTH
 lastQmo<-"2021-09" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"gsarfaty_SA"
@@ -105,8 +106,9 @@ nhls_path_historic<-here("Data/monthly",nhls_file_historic)
 nhls_h<-read_tsv(nhls_path_historic) 
 
 vl_rjection_file<-list.files(monthly_extracts,pattern="Rejections")
-vl_rejections<-read_delim(here("Data/monthly",vl_rjection_file),
-                        delim="|")
+vl_rejection_path<-here("Data/monthly",vl_rjection_file)
+vl_rejections<-vl_rejection_path %>% 
+  map_df(read_delim, delim="|")
 
 #transform weekly to monthly----------------------------------------------------
 
@@ -116,7 +118,7 @@ hfr_snapshot<-hfr %>%
                           "TX_CURR_90","uLTFU")) %>% 
   rename(age=agecoarse,
          disaggregate=otherdisaggregate,
-         snu1=snu,
+         # snu1=snu,
          community=sub_district,
          value=val) %>% 
   mutate(table="hfr",
@@ -135,7 +137,7 @@ hfr_cumulative<-hfr %>%
   filter(indicator %in% c("HTS_TST","HTS_TST_POS","TX_NEW")) %>% 
   rename(age=agecoarse,
          disaggregate=otherdisaggregate,
-         snu1=snu,
+         # snu1=snu,
          community=sub_district,
          value=val) %>% 
   mutate(period=quarter(date, with_year = TRUE, fiscal_start = 10),
@@ -169,7 +171,8 @@ siyenza_att<-siyenza_att %>%
 siyenza<-siyenza %>% 
   clean_names() %>% 
   filter(indicator %in% c("TPT TX_NEW", "TPT TX_CURR")) %>% 
-  rename(snu1=snu,
+  rename(
+         # snu1=snu,
          community=sub_district,
          date=end_date,
          value=sum_of_value)%>% 
@@ -198,7 +201,8 @@ index<-index%>%
          psnu=district,
          mech_code=mechanismid) %>% 
   mutate(table="index",
-         mon_yr= format(date, "%Y-%m")) %>% 
+         mon_yr= format(date, "%Y-%m"),
+         period_type="monthly") %>% 
   mutate(period=quarter(date, with_year = TRUE, fiscal_start = 10),
          period=stringr::str_remove(period, "20"),
          period=str_replace_all(period,"\\.","Q"),
@@ -280,7 +284,7 @@ usaid_arpa<-usaid_arpa %>%
   mech_code=case_when(
     partner=="ANOVA" ~ "70310",
     partner=="EQUIP" ~ "160610",
-    partner=="GETF" ~ "83001",
+    partner=="GETF Next Mile" ~ "83001",
     partner=="Guidehouse" ~ "18321",
     TRUE ~ ""
   ))
@@ -335,7 +339,8 @@ hivss<-hivss%>%
          community=sub_district,
          value=sum_of_value) %>% 
   mutate(table="hivss",
-         date=mdy(date)) %>% 
+         date=mdy(date),
+         period_type="monthly") %>% 
   select(-month)
   
 
@@ -528,9 +533,14 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza,usaid_arpa_combined) %>%
   clean_psnu()
 
 
+# EXPORT FILE ------------------------------------------------------------------
+filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.1.txt",sep="_")
 
-write_tsv(final_df,here("Dataout/monthly","2021-10-31_monthly_nonmer_data_combined_v1.6.txt"),na="")
+write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
 
 
+
+# USAID ARPA EXPORT
+write_tsv(usaid_arpa,here("Dataout/monthly","2021-11-30_monthly_nonmer_data_usaid_arpa.txt"),na="")
 
