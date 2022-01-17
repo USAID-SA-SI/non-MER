@@ -8,6 +8,8 @@ library(glamr)
 library(Wavelength)
 
 
+set_datim("gsarfaty_SA")
+load_secrets()
 
 # global
 current_month<-"2021-11" # CHANGE EACH MONTH
@@ -521,7 +523,7 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza,usaid_arpa_combined) %>%
   filter(!is.na(value)) %>%
   rename(facility=orgunit,
          facilityuid=orgunituid) %>%
-  filter(mon_yr <= current_month & mon_yr >"2020-11") %>% 
+  filter(mon_yr <= current_month & mon_yr >"2020-12") %>% 
   bind_rows(targets) %>% 
   rename_official() %>%
   select(-c(partner,mech_name)) %>% 
@@ -534,7 +536,7 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza,usaid_arpa_combined) %>%
 
 
 # EXPORT FILE ------------------------------------------------------------------
-filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.1.txt",sep="_")
+filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.2.txt",sep="_")
 
 write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
@@ -543,4 +545,10 @@ write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
 # USAID ARPA EXPORT
 write_tsv(usaid_arpa,here("Dataout/monthly","2021-11-30_monthly_nonmer_data_usaid_arpa.txt"),na="")
+
+
+
+
+# USAID REJECTIONS
+write_tsv(vl_rejections,here("Dataout/monthly","2021-11-30_monthly_VLrejects.txt"),na="")
 
