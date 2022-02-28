@@ -8,15 +8,20 @@ library(glamr)
 library(Wavelength)
 
 
+# install.packages("devtools")
+# devtools::install_github("USAID-OHA-SI/gophr")
+
+
+
 set_datim("gsarfaty_SA")
 load_secrets()
 
 # global
-current_month<-"2021-11" # CHANGE EACH MONTH
-current_month_full<-"2021-11-30" # CHANGE EACH MONTH
-last_month<- "2021-10" #CHANGE EACH MONTH
-current_mo_minus_3<- "2021-08" #CHANGE EACH MONTH
-lastQmo<-"2021-09" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
+current_month<-"2022-01" # CHANGE EACH MONTH
+current_month_full<-"2022-01-31" # CHANGE EACH MONTH
+last_month<- "2021-12" #CHANGE EACH MONTH
+current_mo_minus_3<- "2021-10" #CHANGE EACH MONTH
+lastQmo<-"2021-12" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"gsarfaty_SA"
 
@@ -106,6 +111,12 @@ nhls_file_historic<-list.files(monthly_extracts,pattern=paste0(last_month, "_nhl
 nhls_path_historic<-here("Data/monthly",nhls_file_historic)
 
 nhls_h<-read_tsv(nhls_path_historic) 
+
+
+vl_rejection_file_historic<-list.files(monthly_extracts,pattern=paste0(last_month, "_rejections_combined"))
+vl_rejection_path_historic<-here("Data/monthly",vl_rejection_file_historic)
+
+rejections_h<-read_tsv(vl_rejection_path_historic) 
 
 vl_rjection_file<-list.files(monthly_extracts,pattern="Rejections")
 vl_rejection_path<-here("Data/monthly",vl_rjection_file)
@@ -247,18 +258,23 @@ covid<-covid%>%
            str_starts(psnu, "wc") ~ "wc Westerm Cape Province")
          )
 
+#ARPA Total N shenanigans ------------------------------------------------------
 usaid_arpa<-usaid_arpa %>% 
   clean_names() %>% 
   rename(indicator=data_element,
          indicator_code=dataelement_code,
          numeratordenom=num_denom) %>% 
   mutate(disaggregate=case_when(
-    disaggregate=="(blank)" & numeratordenom=="Numerator" ~ "Total Numerator",
-    disaggregate=="(blank)" & numeratordenom=="Denominator" ~ "Total Denominator",
+    disaggregate=="Total numerator" ~ "Total Numerator, calculated",
+    disaggregate=="Denominator" ~ "Total Denominator",
+    disaggregate=="Numerator" ~ "Total Numerator, partner entered",
+    is.na(disaggregate) ~ "Multisectoral Coordination",
     TRUE ~ disaggregate
   )) %>% 
   mutate(standardizeddisaggregate=case_when(
     disaggregate=="Total Numerator" ~ "Total Numerator",
+    disaggregate=="Total numerator" ~ "Total Numerator, calculated",
+    disaggregate=="Numerator" ~ "Total Numerator, partner entered",
     disaggregate=="Total Denominator" ~ "Total Denominator",
     disaggregate=="Male" | disaggregate=="Female" | disaggregate=="Unknown sex" ~ "Sex",
     disaggregate=="Case management for severely/critically ill patients" | 
@@ -290,9 +306,9 @@ usaid_arpa<-usaid_arpa %>%
     partner=="Guidehouse" ~ "18321",
     TRUE ~ ""
   ))
-  
-  
-usaid_arpa_YN<-usaid_arpa %>% 
+
+
+usaid_arpa_YN<-usaid_arpa%>% 
   select(-value) %>% 
   filter(indicator_code=="VACC_0.8",
          !value_text=="(blank)") %>% 
@@ -302,13 +318,13 @@ usaid_arpa_YN<-usaid_arpa %>%
   )) %>% 
   select(-value_text) %>% 
   mutate(value=as.numeric(value))
-  
+
 
 
 usaid_arpa_val<-usaid_arpa %>% 
   select(-value_text) %>% 
   filter(!is.na(value)) 
-  
+
 
 usaid_arpa_combined<-bind_rows(usaid_arpa_val,usaid_arpa_YN) %>% 
   mutate(period=quarter(date, with_year = TRUE, fiscal_start = 10),
@@ -318,6 +334,20 @@ usaid_arpa_combined<-bind_rows(usaid_arpa_val,usaid_arpa_YN) %>%
   mutate(table="usaid arpa",
          mon_yr= format(date, "%Y-%m")) %>% 
   select(-date)
+
+  
+# COMBINING OF USAID TOTAL NUMERATORS ------------------------------------------------
+
+# usaid_arpa_partner_totalN<-usaid_arpa2 %>% 
+#   filter(disaggregate=="Total Numerator,partner entered",
+#          date < as.Date("2021-10-01")) %>% 
+#   mutate(disaggregate=="Total Numerator")
+# 
+# usaid_arpa_all_other_disaggs<-usaid_arpa2 %>% 
+#   filter(!disaggregate=="Total Numerator - partner entered")
+# 
+# usaid_arpa3<-bind_rows(usaid_arpa_all_other_disaggs,usaid_arpa_partner_totalN)
+
 
 
 
@@ -364,7 +394,7 @@ ipc<-ipc %>%
   left_join(sitelist,by="orgunit")
 
 # NHLS -------------------------------------------------------------------------
-sitelist_nhls<-pull_hierarchy("cDGPF739ZZr", myuser, mypwd(myuser)) %>%
+sitelist_nhls<-pull_hierarchy("cDGPF739ZZr", myuser, askpass::askpass()) %>%
   mutate(facility=str_sub(orgunit,4)) %>%
   select(-level,-countryname,-latitude,-longitude)
 
@@ -423,7 +453,7 @@ write_tsv(nhls,here("Data/monthly",paste0(current_month,"_nhls_combined_output.t
 vl_rejections<-vl_rejections %>% 
   clean_names() %>% 
   filter(vl_results=="REJCT") %>% 
-  select(8:12,15,16,19:20) %>% 
+  select(8:14,16:17,20:21) %>% 
   rename(district=district_name,
          facility_n=facility_name,
          disaggregate=rejection_reason1,
@@ -448,7 +478,11 @@ vl_rejections<-vl_rejections %>%
   count() %>% 
   summarize(value = sum(n, na.rm = T)) %>% 
   ungroup()
+
+rejections_combined<-bind_rows(vl_rejections,rejections_h)
   
+#export combined rejections file for use next month
+write_tsv(rejections_combined,here("Data/monthly",paste0(current_month,"_rejections_combined_output.txt")),na="")
 
 
 #core interventions ------------------------------------------------------------
@@ -500,11 +534,11 @@ monthly<-bind_rows(covid,decanting,hivss,tld,ipc,ci_bound) %>%
 
 # MER TARGETS ------------------------------------------------------------------
 targets<-mer %>% 
-  filter(fiscal_year %in% c("2021","2022")) %>% 
-  reshape_msd(clean = TRUE) %>% 
-  filter(indicator %in% c("HTS_TST","HTS_TST_POS","HTS_INDEX","HTS_SELF","TX_NEW","TX_CURR"),
+  filter(fiscal_year %in% c("2021","2022"),
+         indicator %in% c("HTS_TST","HTS_TST_POS","HTS_INDEX","HTS_SELF","TX_NEW","TX_CURR"),
          fundingagency=="USAID",
          standardizeddisaggregate=="Total Numerator") %>% 
+  reshape_msd(direction="long",include_type = TRUE) %>% 
   select(fundingagency,indicator,mech_code,operatingunit,primepartner,
          psnu,snu1,disaggregate,period,period_type,value) %>% 
   mutate(table="mer",
@@ -518,6 +552,8 @@ targets<-mer %>%
   summarize(value = sum(value, na.rm = T)) %>% 
   ungroup()
 
+
+
 #combine -----------------------------------------------------------------------
 final_df<-bind_rows(hfr_combined,monthly,index,siyenza,usaid_arpa_combined) %>% 
   filter(!is.na(value)) %>%
@@ -525,18 +561,19 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza,usaid_arpa_combined) %>%
          facilityuid=orgunituid) %>%
   filter(mon_yr <= current_month & mon_yr >"2020-12") %>% 
   bind_rows(targets) %>% 
-  rename_official() %>%
-  select(-c(partner,mech_name)) %>% 
+  select(-c(partner)) %>%
+  mutate(operatingunit="South Africa") %>% 
+  rename_official() %>% 
   mutate(indicator2=indicator,
          value2=value) %>%
   spread(indicator2,value2) %>%
-  bind_rows(nhls,vl_rejections) %>% 
+  bind_rows(nhls,rejections_combined) %>% 
   left_join(siyenza_att,by="facilityuid") %>% 
   clean_psnu()
 
 
 # EXPORT FILE ------------------------------------------------------------------
-filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.2.txt",sep="_")
+filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.0.txt",sep="_")
 
 write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
@@ -544,11 +581,14 @@ write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
 
 # USAID ARPA EXPORT
-write_tsv(usaid_arpa,here("Dataout/monthly","2021-11-30_monthly_nonmer_data_usaid_arpa.txt"),na="")
+write_tsv(usaid_arpa,here("Dataout/monthly","2021-12-31_monthly_nonmer_data_usaid_arpa.txt"),na="")
 
 
 
 
 # USAID REJECTIONS
-write_tsv(vl_rejections,here("Dataout/monthly","2021-11-30_monthly_VLrejects.txt"),na="")
+write_tsv(vl_rejections,here("Dataout/monthly","2021-12_monthly_VLrejects.txt"),na="")
 
+
+install.packages("devtools")
+devtools::install_github("USAID-OHA-SI/gophr")
