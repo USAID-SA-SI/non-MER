@@ -17,10 +17,10 @@ set_datim("gsarfaty_SA")
 load_secrets()
 
 # global
-current_month<-"2022-01" # CHANGE EACH MONTH
-current_month_full<-"2022-01-31" # CHANGE EACH MONTH
-last_month<- "2021-12" #CHANGE EACH MONTH
-current_mo_minus_3<- "2021-10" #CHANGE EACH MONTH
+current_month<-"2022-02" # CHANGE EACH MONTH
+current_month_full<-"2022-02-28" # CHANGE EACH MONTH
+last_month<- "2022-01" #CHANGE EACH MONTH
+current_mo_minus_3<- "2021-12" #CHANGE EACH MONTH
 lastQmo<-"2021-12" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"gsarfaty_SA"
@@ -567,13 +567,13 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza,usaid_arpa_combined) %>%
   mutate(indicator2=indicator,
          value2=value) %>%
   spread(indicator2,value2) %>%
-  bind_rows(nhls,rejections_combined) %>% 
+  bind_rows(nhls,rejections_combined) %>%
   left_join(siyenza_att,by="facilityuid") %>% 
   clean_psnu()
 
 
 # EXPORT FILE ------------------------------------------------------------------
-filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.0.txt",sep="_")
+filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.2.txt",sep="_")
 
 write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
@@ -581,14 +581,14 @@ write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
 
 # USAID ARPA EXPORT
-write_tsv(usaid_arpa,here("Dataout/monthly","2021-12-31_monthly_nonmer_data_usaid_arpa.txt"),na="")
-
-
-
-
-# USAID REJECTIONS
-write_tsv(vl_rejections,here("Dataout/monthly","2021-12_monthly_VLrejects.txt"),na="")
-
-
-install.packages("devtools")
-devtools::install_github("USAID-OHA-SI/gophr")
+# write_tsv(usaid_arpa,here("Dataout/monthly","2021-12-31_monthly_nonmer_data_usaid_arpa.txt"),na="")
+# 
+# 
+# 
+# 
+# # USAID REJECTIONS
+# write_tsv(vl_rejections,here("Dataout/monthly","2021-12_monthly_VLrejects.txt"),na="")
+# 
+# 
+# install.packages("devtools")
+# devtools::install_github("USAID-OHA-SI/gophr")
