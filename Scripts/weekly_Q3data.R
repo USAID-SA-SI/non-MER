@@ -4,7 +4,10 @@ library(janitor)
 library(readxl)
 library(lubridate)
 library(gophr)
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 
 
 
@@ -82,5 +85,9 @@ final_df<-bind_rows(hfr_syzatt,workforce) %>%
 
 
 
+<<<<<<< Updated upstream
 write_tsv(final_df,here("Dataout/weekly","2021-09-24_v1.0_weekly_nonmer_data_combined.txt"),na="")
+=======
+write_tsv(final_df,here("Dataout/weekly","2021-10-29_v1.0_weekly_nonmer_data_combined.txt"),na="")
+>>>>>>> Stashed changes
 
