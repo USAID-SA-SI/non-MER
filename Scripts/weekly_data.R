@@ -40,7 +40,7 @@ hfr<-hfr %>%
            TRUE ~ date
          )) %>% 
   filter(operatingunit=="South Africa",
-         date > "2020-12-28")
+         date > "2021-10-01")
 
 
 
@@ -57,7 +57,7 @@ workforce<-workforce %>%
     partner=="Maternal, Adolscent and Child Health (MatCH)" ~ "81902",
     partner=="Right To Care, South Africa" ~ "70290",
     partner=="Wits Reproductive Health& HIV Institute" ~ "70301")) %>% 
-  filter(date > "2020-12-28")
+  filter(date > "2021-10-01")
 
 
 siyenza<-siyenza %>% 
@@ -81,5 +81,5 @@ final_df<-bind_rows(hfr_syzatt,workforce) %>%
 
 
 
-write_tsv(final_df,here("Dataout/weekly","2021-07-16_v1.0_weekly_nonmer_data_combined.txt"),na="")
+write_tsv(final_df,here("Dataout/weekly","2022-06-01_v1.0_weekly_nonmer_data_combined.txt"),na="")
 
