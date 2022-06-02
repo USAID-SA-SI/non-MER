@@ -17,11 +17,11 @@ set_datim("gsarfaty_SA")
 load_secrets()
 
 # global
-current_month<-"2022-02" # CHANGE EACH MONTH
-current_month_full<-"2022-02-28" # CHANGE EACH MONTH
-last_month<- "2022-01" #CHANGE EACH MONTH
-current_mo_minus_3<- "2021-12" #CHANGE EACH MONTH
-lastQmo<-"2021-12" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
+current_month<-"2022-04" # CHANGE EACH MONTH
+current_month_full<-"2022-04-30" # CHANGE EACH MONTH
+last_month<- "2022-03" #CHANGE EACH MONTH
+current_mo_minus_3<- "2022-01" #CHANGE EACH MONTH
+lastQmo<-"2022-03" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"gsarfaty_SA"
 
@@ -536,10 +536,10 @@ monthly<-bind_rows(covid,decanting,hivss,tld,ipc,ci_bound) %>%
 targets<-mer %>% 
   filter(fiscal_year %in% c("2021","2022"),
          indicator %in% c("HTS_TST","HTS_TST_POS","HTS_INDEX","HTS_SELF","TX_NEW","TX_CURR"),
-         fundingagency=="USAID",
+         funding_agency=="USAID",
          standardizeddisaggregate=="Total Numerator") %>% 
   reshape_msd(direction="long",include_type = TRUE) %>% 
-  select(fundingagency,indicator,mech_code,operatingunit,primepartner,
+  select(funding_agency,indicator,mech_code,operatingunit,primepartner,
          psnu,snu1,disaggregate,period,period_type,value) %>% 
   mutate(table="mer",
     indicator=case_when(
@@ -571,24 +571,13 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza,usaid_arpa_combined) %>%
   left_join(siyenza_att,by="facilityuid") %>% 
   clean_psnu()
 
+# remove USAID ARPA FOR NOW WHILE DATA CLEANING OCCURS!
+final_df <-final_df %>% 
+  filter(!table=="usaid arpa")
+
 
 # EXPORT FILE ------------------------------------------------------------------
-filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.2.txt",sep="_")
+filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.0.txt",sep="_")
 
 write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
-
-
-
-# USAID ARPA EXPORT
-# write_tsv(usaid_arpa,here("Dataout/monthly","2021-12-31_monthly_nonmer_data_usaid_arpa.txt"),na="")
-# 
-# 
-# 
-# 
-# # USAID REJECTIONS
-# write_tsv(vl_rejections,here("Dataout/monthly","2021-12_monthly_VLrejects.txt"),na="")
-# 
-# 
-# install.packages("devtools")
-# devtools::install_github("USAID-OHA-SI/gophr")
