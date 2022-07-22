@@ -9,7 +9,7 @@ library(Wavelength)
 
 
 # install.packages("devtools")
-# devtools::install_github("USAID-OHA-SI/gophr")
+# devtools::install_github("USAID-OHA-SI/Wavelength")
 
 
 
@@ -17,10 +17,10 @@ set_datim("gsarfaty_SA")
 load_secrets()
 
 # global
-current_month<-"2022-05" # CHANGE EACH MONTH
-current_month_full<-"2022-05-31" # CHANGE EACH MONTH
-last_month<- "2022-04" #CHANGE EACH MONTH
-current_mo_minus_3<- "2022-02" #CHANGE EACH MONTH
+current_month<-"2022-06" # CHANGE EACH MONTH
+current_month_full<-"2022-06-30" # CHANGE EACH MONTH
+last_month<- "2022-05" #CHANGE EACH MONTH
+current_mo_minus_3<- "2022-03" #CHANGE EACH MONTH
 lastQmo<-"2022-03" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"gsarfaty_SA"
@@ -30,7 +30,7 @@ myuser<-"gsarfaty_SA"
 monthly_extracts<-here("Data/monthly")
 
 
-MER_file<-list.files(monthly_extracts,pattern="Genie") 
+MER_file<-list.files(monthly_extracts,pattern="SITE") 
 mer<-read_msd(here("Data/monthly",MER_file))
   
   
@@ -490,7 +490,7 @@ df_vl_rejections<-vl_rejections %>%
   count() %>% 
   summarize(value = sum(n, na.rm = T)) %>% 
   ungroup() %>% 
-  filter(mon_yr<"2022-06") #this time only to remove erroneous June
+  filter(mon_yr<=current_month) #this time only to remove erroneous June
 
 df_cd4_rejections<-vl_rejections %>% 
   clean_names() %>% 
@@ -520,7 +520,7 @@ df_cd4_rejections<-vl_rejections %>%
   count() %>% 
   summarize(value = sum(n, na.rm = T)) %>% 
   ungroup() %>% 
-  filter(mon_yr<"2022-06") #this time only to remove erroneous June
+  filter(mon_yr<=current_month) #this time only to remove erroneous June
 
 
 current_rejections<-bind_rows(df_vl_rejections,df_cd4_rejections)
@@ -585,12 +585,13 @@ monthly<-bind_rows(covid,decanting,hivss,tld,ipc,ci_bound) %>%
 # MER TARGETS ------------------------------------------------------------------
 targets<-mer %>% 
   filter(fiscal_year %in% c("2021","2022"),
-         indicator %in% c("HTS_TST","HTS_TST_POS","HTS_INDEX","HTS_SELF","TX_NEW","TX_CURR"),
+         indicator %in% c("HTS_TST","HTS_TST_POS","HTS_INDEX","HTS_SELF","TX_NEW","TX_CURR",
+                          "TX_PVLS"),
          funding_agency=="USAID",
-         standardizeddisaggregate=="Total Numerator") %>% 
+         standardizeddisaggregate %in% c("Total Numerator", "Total Denominator")) %>% 
   reshape_msd(direction="long",include_type = TRUE) %>% 
   select(funding_agency,indicator,mech_code,operatingunit,prime_partner_name,
-         psnu,snu1,disaggregate,period,period_type,value) %>% 
+         psnu,snu1,facility,facilityuid,disaggregate,period,period_type,value) %>% 
   mutate(table="mer",
     indicator=case_when(
       indicator=="TX_CURR" ~ "TX_CURR_28",
@@ -625,7 +626,7 @@ final_df<-bind_rows(hfr_combined,monthly,index,siyenza,
 
 
 # EXPORT FILE ------------------------------------------------------------------
-filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.5.txt",sep="_")
+filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.2.txt",sep="_")
 
 write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
