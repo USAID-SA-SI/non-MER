@@ -29,15 +29,16 @@ drive_auth()
 gs4_auth()
 
 
-conn <- dbConnect() #enter parameters and credentials
+conn <- 
+#enter parameters and credentials
 
 
 
 # GLOBALS ----------------------------------------------------------------------
-current_month<-"2022-07" # CHANGE EACH MONTH
-current_month_full<-"2022-07-31" # CHANGE EACH MONTH
-last_month<- "2022-06" #CHANGE EACH MONTH
-current_mo_minus_3<- "2022-04" #CHANGE EACH MONTH
+current_month<-"2022-09" # CHANGE EACH MONTH
+current_month_full<-"2022-09-30" # CHANGE EACH MONTH
+last_month<- "2022-08" #CHANGE EACH MONTH
+current_mo_minus_3<- "2022-06" #CHANGE EACH MONTH
 lastQmo<-"2022-06" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"gsarfaty_SA"
@@ -192,26 +193,18 @@ df<-import_table %>%
          last_refreshed=last_modified,
          value=indicator_value__datatype_numeric) %>%
   filter(mon_yr >"2022-06-30" & mon_yr <"2022-09-01",
-         is_cleared=="TRUE",
+         mon_yr=="2022-07-31" & is_cleared=="TRUE" | mon_yr=="2022-08-31" & is_cleared==FALSE,
          !is.na(indicator)) %>% 
   mutate(period_type="monthly",
          mon_yr= format(mon_yr, "%Y-%m"))
 
 #summary check
 df_check<-df %>% 
-  group_by(mon_yr,indicator) %>% 
+  group_by(mon_yr,is_cleared) %>% 
   summarize_at(vars(value),sum,na.rm=TRUE) %>% 
   spread(mon_yr,value)
 
 
-#why weekly periods creeping in?
-weekly<-df %>% 
-  distinct(mon_yr,indicator)
-
-#need to understand these values!!!
-not_cleared<-import_table %>% 
-  filter(is_cleared=="FALSE",
-         period_uid %in% c("MNL2022/07/31","MNL2022/08/31"))
 
 # MERGE HISTORIC AND JULY + ----------------------------------------------------
 
@@ -315,7 +308,8 @@ nhls<-bind_rows(nhls_c,nhls_h) %>%
     indicator=="EID PCR" ~ "EID_PCR",
     indicator=="HIVVL" ~ "HIV_VL",
     indicator=="Xpert MTB" ~ "XPERT_MTB",
-    indicator=="Xpert MTB Rif" ~ "XPERT_MTB_RIF"
+    indicator=="Xpert MTB Rif" ~ "XPERT_MTB_RIF",
+    TRUE ~ indicator,
   ))
   
 
@@ -402,7 +396,8 @@ rejections_check<-current_rejections %>%
 rejections_combined<-bind_rows(current_rejections,historic_rejections_sub) %>% 
   mutate(indicator=case_when(
     indicator=="VL_rejection" ~ "VL_REJECTION",
-    indicator=="CD4_rejection" ~ "CD4_REJECTION"
+    indicator=="CD4_rejection" ~ "CD4_REJECTION",
+    TRUE ~ indicator,
   ))
   
 #export combined rejections file for use next month
