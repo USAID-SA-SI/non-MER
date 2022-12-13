@@ -22,24 +22,24 @@ library(googlesheets4)
 
 
 # CREDENTIALS ------------------------------------------------------------------
-set_datim() #enter username
+set_datim() #enter DATIM username
 load_secrets()
 
 drive_auth()
 gs4_auth()
 
 
-conn <- 
+conn <- dbConnect()
 #enter parameters and credentials
 
 
 
 # GLOBALS ----------------------------------------------------------------------
-current_month<-"2022-09" # CHANGE EACH MONTH
-current_month_full<-"2022-09-30" # CHANGE EACH MONTH
-last_month<- "2022-08" #CHANGE EACH MONTH
-current_mo_minus_3<- "2022-06" #CHANGE EACH MONTH
-lastQmo<-"2022-06" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
+current_month<-"2022-10" # CHANGE EACH MONTH
+current_month_full<-"2022-10-31" # CHANGE EACH MONTH
+last_month<- "2022-09" #CHANGE EACH MONTH
+current_mo_minus_3<- "2022-07" #CHANGE EACH MONTH
+lastQmo<-"2022-09" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"gsarfaty_SA"
 
@@ -129,7 +129,7 @@ df_historic_munge<-df_historic %>%
   select(-operatingunit,-snu,-snu1,-psnu,-community,-facility,-facilityuid,
          -orgunit_name_OLD,-fundingagency) %>% 
   left_join(hierarchy_list,by="orgunit_uid") %>% 
-  select(-datim_hierarchy_codelist_uid,-date_created,-last_modified,-is_deleted) %>% 
+  select(-datim_hierarchy_codelist_uid,-date_created,-last_modified,-is_deleted) %>%
   relocate(orgunit_uid:facility, .before=mech_code) %>% 
   relocate(indicator,standardizeddisaggregate,disaggregate,numeratordenom, 
            .after=funding_agency) %>% 
@@ -137,13 +137,25 @@ df_historic_munge<-df_historic %>%
   relocate(program_area_element, .before = indicator) %>% 
   relocate(period_type, .after = period) %>% 
   relocate(value, .after = table) %>% 
-  mutate(mech_code=as.character(mech_code))
+  mutate(mech_code=as.character(mech_code)) %>% 
+  filter(!orgunit_uid %in% c("Ea134rZlKXX",
+                             "ekRXPVQUGw4",
+                             "KJ6EYihrWdp",
+                             "IerN7CQQCkP",
+                             "pSyJH54GQP8",
+                             "HMTtf6bjH2g"))
   
 
 # identify and fix missing orgunituids  
 nas<-df_historic_munge %>% 
   filter(is.na(orgunit_uid)) %>% 
   distinct(site_type,psnu,community,facility,orgunit_uid)
+
+# identify duplicate facilities
+dup<-df_historic_munge %>% distinct(orgunit_name,orgunit_uid) %>% 
+  count(orgunit_name) %>% 
+  filter(n>1)
+
 
 # DATA CENTER JULY 22 ONWARD ---------------------------------------------------
 
@@ -172,13 +184,15 @@ pops <- dbGetQuery(conn,"SELECT * FROM refpops") %>%
   select(orgunit_uid) %>% 
   mutate(pops_site="Yes")
 
+
+
 # merge tables
 df<-import_table %>% 
   left_join(data_element_list, by="dataelement_codelist_uid") %>% 
   left_join(hierarchy_list, by="orgunit_uid") %>% 
   left_join(mech_list, by="mech_codelist_uid") %>% 
   left_join(period_list, by="period_codelist_uid") %>% 
-  select(orgunit_uid,site_type,operatingunit,snu1uid,snu1,
+  select(orgunit_uid,orgunit_name,site_type,operatingunit,snu1uid,snu1,
          psnuuid,psnu,communityuid,community,facilityuid,facility,
          fundingagency,mech_code,
          mech_name,primepartner,dataset,indicator,disaggregate,
@@ -192,8 +206,9 @@ df<-import_table %>%
          period=quarter,
          last_refreshed=last_modified,
          value=indicator_value__datatype_numeric) %>%
-  filter(mon_yr >"2022-06-30" & mon_yr <"2022-09-01",
-         mon_yr=="2022-07-31" & is_cleared=="TRUE" | mon_yr=="2022-08-31" & is_cleared==FALSE,
+  filter(mon_yr >"2022-06-30" & mon_yr <"2022-11-01",
+         is_cleared=="TRUE",
+         # mon_yr=="2022-07-31" & is_cleared=="TRUE" | mon_yr=="2022-08-31" & is_cleared=="FALSE",
          !is.na(indicator)) %>% 
   mutate(period_type="monthly",
          mon_yr= format(mon_yr, "%Y-%m"))
@@ -294,7 +309,13 @@ nhls_c<-nhls_c %>%
 
 
 nhls_h<-nhls_h %>%
-  filter(mon_yr <= current_mo_minus_3)
+  filter(mon_yr <= current_mo_minus_3) %>% 
+  mutate(age=case_when(
+    age=="44565" ~ "1-4",
+    age=="44690" ~ "5-9",
+    age=="44848" ~ "10-14",
+    TRUE ~ age
+  ))
 
 nhls_h_check<-nhls_h %>% 
   group_by(indicator,mon_yr) %>% 
@@ -354,7 +375,14 @@ df_vl_rejections<-vl_rejections %>%
   count() %>% 
   summarize(value = sum(n, na.rm = T)) %>% 
   ungroup() %>% 
-  filter(mon_yr<=current_month) #this time only to remove erroneous June
+  filter(mon_yr<=current_month) %>%  #this time only to remove erroneous June
+  mutate(age=case_when(
+    age=="20-14" ~ "20-24",
+    age=="25-19" ~ "25-29",
+    TRUE ~ age
+  )) #necessary to fix sept 2022 age typos
+
+
 
 df_cd4_rejections<-vl_rejections %>% 
   clean_names() %>% 
@@ -384,7 +412,12 @@ df_cd4_rejections<-vl_rejections %>%
   count() %>% 
   summarize(value = sum(n, na.rm = T)) %>% 
   ungroup() %>% 
-  filter(mon_yr<=current_month) #this time only to remove erroneous June
+  filter(mon_yr<=current_month) %>%  #this time only to remove erroneous June
+  mutate(age=case_when(
+    age=="20-14" ~ "20-24",
+    age=="25-19" ~ "25-29",
+    TRUE ~ age
+  )) #necessary to fix sept 2022 age typos
 
 
 current_rejections<-bind_rows(df_vl_rejections,df_cd4_rejections)
@@ -405,14 +438,16 @@ write_tsv(rejections_combined,here("Data/monthly",paste0(current_month,"_rejecti
 
 # MER TARGETS ------------------------------------------------------------------
 targets<-mer %>% 
-  filter(fiscal_year %in% c("2021","2022"),
+  filter(fiscal_year %in% c("2021","2022","2023"),
          indicator %in% c("HTS_TST","HTS_TST_POS","HTS_INDEX","HTS_SELF","TX_NEW","TX_CURR",
                           "TX_PVLS"),
          funding_agency=="USAID",
          standardizeddisaggregate %in% c("Total Numerator", "Total Denominator")) %>% 
   reshape_msd(direction="long",include_type = TRUE) %>% 
-  select(funding_agency,indicator,mech_code,operatingunit,prime_partner_name,
+  select(orgunituid,sitename,funding_agency,indicator,mech_code,operatingunit,prime_partner_name,
          psnu,snu1,facility,facilityuid,disaggregate,period,period_type,value) %>% 
+  rename(orgunit_uid=orgunituid,
+         orgunit_name=sitename) %>% 
   mutate(table="mer") %>% 
     # indicator=case_when(
     #   indicator=="TX_CURR" ~ "TX_CURR_28",
@@ -446,7 +481,7 @@ final_df<-df_current %>%
 
 
 # EXPORT FILE ------------------------------------------------------------------
-filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.2.txt",sep="_")
+filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.0.txt",sep="_")
 
 write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
