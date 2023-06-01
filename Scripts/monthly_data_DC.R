@@ -1,3 +1,4 @@
+library(DBI)
 library(tidyverse)
 library(here)
 library(janitor)
@@ -16,30 +17,67 @@ library(googlesheets4)
 
 
 
+
 # install.packages("devtools")
 # devtools::install_github("USAID-OHA-SI/Wavelength")
 # devtools::install_github("sicarul/redshiftTools")
 
 
 # CREDENTIALS ------------------------------------------------------------------
-set_datim() #enter DATIM username
-load_secrets()
+set_datim() #from glamr - only need to run once to store credentials
 
+
+load_secrets() #loads credentials once stored once using above line
 drive_auth()
 gs4_auth()
 
 
-conn <- dbConnect()
-#enter parameters and credentials
+# DATABASE CONNECTION ----------------------------------------------------------
+#LOCAL FUNCTIONS
+source(here("Scripts/00_utilities.R"))
+
+#DB FUNCTION
+aws_connect <- function(db_name, db_user, db_pass,
+                        db_host,db_port) {
+  ## Connections
+  DBI::dbConnect(
+    drv=RPostgres::Postgres(),
+    host = db_host,
+    port = as.integer(db_port),
+    dbname = db_name,
+    user = db_user,
+    password = db_pass
+  )
+}
+
+
+#ONE TIME ONLY TO STORE CREDENTIALS
+set_key(service = pg_service("DC"), "host")
+set_key(service = pg_service("DC"), "port")
+set_key(service = pg_service("DC"), "database")
+set_key(service = pg_service("DC"), "username")
+set_key(service = pg_service("DC"), "password")
+
+#load keys
+db_host <-pg_host("DC")
+db_port <- pg_port("DC")
+db_name <- pg_database("DC")
+db_user <- pg_user("DC")
+db_pwd <- pg_pwd("DC")
+
+
+#establish connection
+conn <- aws_connect(db_name = db_name, db_user = db_user,
+                    db_pass = db_pwd, db_host = db_host, db_port = db_port)
 
 
 
 # GLOBALS ----------------------------------------------------------------------
-current_month<-"2022-10" # CHANGE EACH MONTH
-current_month_full<-"2022-10-31" # CHANGE EACH MONTH
-last_month<- "2022-09" #CHANGE EACH MONTH
-current_mo_minus_3<- "2022-07" #CHANGE EACH MONTH
-lastQmo<-"2022-09" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
+current_month<-"2023-04" # CHANGE EACH MONTH
+current_month_full<-"2023-04-30" # CHANGE EACH MONTH
+last_month<- "2023-03" #CHANGE EACH MONTH
+current_mo_minus_3<- "2023-01" #CHANGE EACH MONTH
+lastQmo<-"2023-03" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"gsarfaty_SA"
 
@@ -70,17 +108,17 @@ monthly_extracts<-here("Data/monthly")
 historic_file<-list.files(monthly_extracts,pattern="historical")
 df_historic<-read_tsv(here("Data/monthly",historic_file))
 
-  
-df_historic_munge<-df_historic %>% 
+
+df_historic_munge<-df_historic %>%
   filter(!table=="mer",
-         !table=="NHLS") %>% 
-  select(operatingunit:standardizeddisaggregate) %>% 
-  left_join(ind,by=c("indicator"="old_indicator_name"),keep=TRUE) %>% 
+         !table=="NHLS") %>%
+  select(operatingunit:standardizeddisaggregate) %>%
+  left_join(ind,by=c("indicator"="old_indicator_name"),keep=TRUE) %>%
   select(-table,-indicator,-old_indicator_name,-indicator_status,
          -indicator_code,-new_indidcator_status,-org_unit_status) %>%
   rename(table=new_table,
-         indicator=indicator_1) %>% 
-  filter(!is.na(indicator)) %>% 
+         indicator=indicator_1) %>%
+  filter(!is.na(indicator)) %>%
   mutate(psnu=case_when(
     psnu=="Mopani" ~ "lp Mopani District Municipality",
     psnu=="City of Cape Town" ~ "wc City of Cape Town Metropolitan Municipality",
@@ -89,20 +127,20 @@ df_historic_munge<-df_historic %>%
     psnu=="Capricorn" ~ "lp Capricorn District Municipality",
     psnu=="King Cetshwayo" ~ "kz King Cetshwayo District Municipality",
     psnu=="Ugu" ~ "kz Ugu District Municipality",
-    psnu=="Gert Sibande"~ "mp Gert Sibande District Municipality",                                  
-    psnu=="Nkangala" ~ "mp Nkangala District Municipality",                                         
-    psnu=="Alfred Nzo" ~ "ec Alfred Nzo District Municipality",                                    
-    psnu=="Buffalo City" ~ "ec Buffalo City Metropolitan Municipality",                                    
-    psnu=="Harry Gwala" ~ "kz Harry Gwala District Municipality",                                      
-    psnu=="Thabo Mofutsanyane" ~ "fs Thabo Mofutsanyane District Municipality",                              
-    psnu=="Ehlanzeni" ~ "mp Ehlanzeni District Municipality",                                        
-    psnu=="Lejweleputswa" ~ "fs Lejweleputswa District Municipality",                                    
+    psnu=="Gert Sibande"~ "mp Gert Sibande District Municipality",
+    psnu=="Nkangala" ~ "mp Nkangala District Municipality",
+    psnu=="Alfred Nzo" ~ "ec Alfred Nzo District Municipality",
+    psnu=="Buffalo City" ~ "ec Buffalo City Metropolitan Municipality",
+    psnu=="Harry Gwala" ~ "kz Harry Gwala District Municipality",
+    psnu=="Thabo Mofutsanyane" ~ "fs Thabo Mofutsanyane District Municipality",
+    psnu=="Ehlanzeni" ~ "mp Ehlanzeni District Municipality",
+    psnu=="Lejweleputswa" ~ "fs Lejweleputswa District Municipality",
     psnu=="eThekwini" ~  "kz eThekwini Metropolitan Municipality",
     TRUE ~ psnu),
     community=case_when(
       community=="lp Polokwane Local Municipality" ~ "lp Polokwane Local Municipality EHP",
       community=="ec Umzimvubu Health sub-District" ~ "ec Umzimvubu Local Municipality",
-      community=="ec Buffalo City Local Municipality" ~ "ec Buffalo City Health sub-District",   
+      community=="ec Buffalo City Local Municipality" ~ "ec Buffalo City Health sub-District",
       community=="fs Dihlabeng Local Municipality" ~ "fs Dihlabeng Local Municipality - LG EHS",
       TRUE ~ community
     ),
@@ -120,40 +158,40 @@ df_historic_munge<-df_historic %>%
       site_type=="District" ~ psnu,
       site_type=="Facility" ~ facility,
       site_type=="Community" ~ community)
-    ) %>% 
-  left_join(orgunits,by=c("orgunit_name_OLD"="orgunit_name")) %>% 
+    ) %>%
+  left_join(orgunits,by=c("orgunit_name_OLD"="orgunit_name")) %>%
   mutate(orgunit_uid=case_when(
     is.na(orgunit_uid) & site_type=="Facility" ~ facilityuid,
     TRUE ~ orgunit_uid
-  )) %>% 
+  )) %>%
   select(-operatingunit,-snu,-snu1,-psnu,-community,-facility,-facilityuid,
-         -orgunit_name_OLD,-fundingagency) %>% 
-  left_join(hierarchy_list,by="orgunit_uid") %>% 
+         -orgunit_name_OLD,-fundingagency) %>%
+  left_join(hierarchy_list,by="orgunit_uid") %>%
   select(-datim_hierarchy_codelist_uid,-date_created,-last_modified,-is_deleted) %>%
-  relocate(orgunit_uid:facility, .before=mech_code) %>% 
-  relocate(indicator,standardizeddisaggregate,disaggregate,numeratordenom, 
-           .after=funding_agency) %>% 
-  relocate(site_type, .after = facility) %>% 
-  relocate(program_area_element, .before = indicator) %>% 
-  relocate(period_type, .after = period) %>% 
-  relocate(value, .after = table) %>% 
-  mutate(mech_code=as.character(mech_code)) %>% 
+  relocate(orgunit_uid:facility, .before=mech_code) %>%
+  relocate(indicator,standardizeddisaggregate,disaggregate,numeratordenom,
+           .after=funding_agency) %>%
+  relocate(site_type, .after = facility) %>%
+  relocate(program_area_element, .before = indicator) %>%
+  relocate(period_type, .after = period) %>%
+  relocate(value, .after = table) %>%
+  mutate(mech_code=as.character(mech_code)) %>%
   filter(!orgunit_uid %in% c("Ea134rZlKXX",
                              "ekRXPVQUGw4",
                              "KJ6EYihrWdp",
                              "IerN7CQQCkP",
                              "pSyJH54GQP8",
                              "HMTtf6bjH2g"))
-  
 
-# identify and fix missing orgunituids  
-nas<-df_historic_munge %>% 
-  filter(is.na(orgunit_uid)) %>% 
+
+# identify and fix missing orgunituids
+nas<-df_historic_munge %>%
+  filter(is.na(orgunit_uid)) %>%
   distinct(site_type,psnu,community,facility,orgunit_uid)
 
 # identify duplicate facilities
-dup<-df_historic_munge %>% distinct(orgunit_name,orgunit_uid) %>% 
-  count(orgunit_name) %>% 
+dup<-df_historic_munge %>% distinct(orgunit_name,orgunit_uid) %>%
+  count(orgunit_name) %>%
   filter(n>1)
 
 
@@ -163,7 +201,8 @@ dup<-df_historic_munge %>% distinct(orgunit_name,orgunit_uid) %>%
 # read relational tables from redshift
 import_table <- dbGetQuery(conn,"SELECT * FROM import_table") %>% 
   select(orgunit_uid,dataelement_codelist_uid,dataelement_codelist_uid,period_codelist_uid,
-         mech_codelist_uid,indicator_value__datatype_numeric,is_cleared,indicator_value)
+         mech_codelist_uid,indicator_value__datatype_numeric,is_cleared,indicator_value,
+         comment_uid,other_comment)
 
 data_element_list<-dbGetQuery(conn,"SELECT * FROM dataelement_codelist") %>% 
   filter(is_current=="TRUE")
@@ -184,7 +223,9 @@ pops <- dbGetQuery(conn,"SELECT * FROM refpops") %>%
   select(orgunit_uid) %>% 
   mutate(pops_site="Yes")
 
-
+staffing_model<-dbGetQuery(conn,"SELECT * FROM refstaffing_model") %>% 
+  filter(is_current=="TRUE") %>% 
+  select(orgunit_uid,staffing_model)
 
 # merge tables
 df<-import_table %>% 
@@ -197,7 +238,8 @@ df<-import_table %>%
          fundingagency,mech_code,
          mech_name,primepartner,dataset,indicator,disaggregate,
          categoryoptioncomboname,age,sex,period,quarter,period_frequency,
-         is_cleared,last_modified,indicator_value__datatype_numeric) %>% 
+         is_cleared,last_modified,indicator_value__datatype_numeric,
+         comment_uid,other_comment) %>% 
   rename(prime_partner_name=primepartner,
          funding_agency=fundingagency,
          period_type=period_frequency,
@@ -206,7 +248,7 @@ df<-import_table %>%
          period=quarter,
          last_refreshed=last_modified,
          value=indicator_value__datatype_numeric) %>%
-  filter(mon_yr >"2022-06-30" & mon_yr <"2022-11-01",
+  filter(mon_yr >"2022-06-30" & mon_yr <"2023-05-01", #change to ensure no data past current data mo
          is_cleared=="TRUE",
          # mon_yr=="2022-07-31" & is_cleared=="TRUE" | mon_yr=="2022-08-31" & is_cleared=="FALSE",
          !is.na(indicator)) %>% 
@@ -223,17 +265,18 @@ df_check<-df %>%
 
 # MERGE HISTORIC AND JULY + ----------------------------------------------------
 
-df_current<-df_historic_munge %>% 
-  bind_rows(df) %>% 
-  relocate(categoryoptioncomboname, .after = standardizeddisaggregate) %>% 
-  relocate(is_cleared, .after = last_refreshed)
+df_current<-df_historic_munge %>%
+  bind_rows(df) %>%
+  relocate(categoryoptioncomboname, .after = standardizeddisaggregate) %>%
+  relocate(is_cleared, .after = last_refreshed) %>%
+  rename_official()
 
 
 
 
 # NON DC DATA ------------------------------------------------------------------
 MER_file<-list.files(monthly_extracts,pattern="SITE") 
-mer<-read_msd(here("Data/monthly",MER_file))
+mer<-read_psd(here("Data/monthly",MER_file))
   
 
 nhls_file_current<-list.files(monthly_extracts,pattern=paste0(current_month, "_NHLS"))
@@ -241,10 +284,11 @@ nhls_path_current<-here("Data/monthly",nhls_file_current)
 
 nhls_c<- nhls_path_current %>% 
   excel_sheets() %>% 
-  set_names() %>%
+  purrr::set_names() %>%
   map_dfr(read_excel,
           path = nhls_path_current, 
-          .id="sheet")
+          .id="sheet") 
+
 
 nhls_file_historic<-list.files(monthly_extracts,pattern=paste0(last_month, "_nhls"))
 nhls_path_historic<-here("Data/monthly",nhls_file_historic)
@@ -301,7 +345,9 @@ nhls_c<-nhls_c %>%
   select(-province) %>% 
   left_join(nhls_districts,by=c("district"="health_district")) %>% 
   select(-district) %>% 
-  left_join(sitelist_district,by="psnuuid")
+  left_join(sitelist_district,by="psnuuid") %>% 
+  filter(mon_yr > current_mo_minus_3) %>% 
+  filter(mon_yr <= current_month)
   # left_join(sitelist_nhls,by=c("facility_n"="facility")) %>% #change this back to facility once site list match resolved
   # select(-facility) %>% #add back in once site list match resolved
   # rename(facility=orgunit,
@@ -342,7 +388,7 @@ write_tsv(nhls,here("Data/monthly",paste0(current_month,"_nhls_combined_output.t
 
 #subset historic rejections as new file has all of 2022
 historic_rejections_sub<-rejections_h %>% 
-  filter(mon_yr < "2022-01")
+  filter(mon_yr <= current_mo_minus_3) 
 
 prinf(distinct(historic_rejections_sub,mon_yr))
 
@@ -350,7 +396,9 @@ prinf(distinct(historic_rejections_sub,mon_yr))
 df_vl_rejections<-vl_rejections %>% 
   clean_names() %>% 
   filter(vl_results=="REJCT") %>% 
-  select(8:14,16:17,20:21) %>% 
+  select(8:14,16:17,20:21) %>%
+  # select(8:13,15:16,19:20) %>% #for feb 23 data only - missing field
+  # mutate(age_category=rejection_code) %>% #for feb 23 data only - missing field
   rename(district=district_name,
          facility_n=facility_name,
          disaggregate=rejection_reason1,
@@ -387,7 +435,9 @@ df_vl_rejections<-vl_rejections %>%
 df_cd4_rejections<-vl_rejections %>% 
   clean_names() %>% 
   filter(vl_results=="REJCT") %>% 
-  select(8:14,16:17,20:21) %>% 
+  select(8:14,16:17,20:21) %>%
+  # select(8:13,15:16,19:20) %>% #for feb 23 data only - missing field
+  # mutate(age_category=rejection_code) %>% #for feb 23 data only - missing field
   rename(district=district_name,
          facility_n=facility_name,
          disaggregate=rejection_reason1,
@@ -463,8 +513,10 @@ targets<-mer %>%
 
 #combine -----------------------------------------------------------------------
 final_df<-df_current %>% 
+  filter(mon_yr >"2022-10-31") %>% #reduce non-MER to last 6 mo only
   bind_rows(targets) %>% 
   left_join(pops,by="orgunit_uid") %>% 
+  left_join(staffing_model, by="orgunit_uid") %>% 
   mutate(standardizeddisaggregate=as.character(standardizeddisaggregate),
           numeratordenom=as.character(numeratordenom),
           last_refreshed=as.character(last_refreshed),
@@ -475,15 +527,18 @@ final_df<-df_current %>%
   mutate(indicator2=indicator,
          value2=value) %>%
   spread(indicator2,value2) %>%
-  bind_rows(nhls,rejections_combined) 
+  bind_rows(nhls,rejections_combined)
   # clean_psnu()
 
 
 
 # EXPORT FILE ------------------------------------------------------------------
-filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.0.txt",sep="_")
+filename<-paste(current_month_full,"monthly_nonmer_data_combined_v2.0.txt",sep="_")
 
 write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
 
 
+
+site_att<-staffing_model %>% 
+  full_join(pops, by="orgunit_uid")
