@@ -124,10 +124,9 @@ AllData<-bind_rows(NACOSA_All,FHI360,CINDI,G2G,M2M,PACT,HIVSA)
 #Level Checks:Looking for missing data across indicator points
 
 OutputTableau<-gather(AllData,period,value,`7/31/2021`:`9/30/2023`) %>% mutate(period=mdy(period)) %>% mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>% mutate(value=abs(value),missing=if_else(  is.na(value),"Yes","No"))%>% 
-  group_by( mech_code ,primepartner, psnu,community,indicator ,disaggregate , age,
-otherdisaggregate , community_status,indicator_status, Start_Date,period,period_type  ,missing ) %>% summarise(value=sum(value)) 
-
-####FLAGGING MISSING DATRA FOR CORRECTION
+  group_by( mech_code ,primepartner, psnu,community,indicator ,last_refreshed,disaggregate , age,otherdisaggregate , community_status,indicator_status, Start_Date,period,period_type  ,missing ) %>% summarise(value=sum(value)) %>% select(mech_code ,primepartner, psnu,community,indicator,value ,Start_Date,period,last_refreshed,missing,period_type,age,disaggregate ,
+     otherdisaggregate , community_status,indicator_status) 
+###FLAGGING MISSING DATRA FOR CORRECTION
 
 Missing_data_FHI360<-OutputTableau %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period,indicator_status=="Active",mech_code!=80002) %>%   mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
   filter(mech_code=="14295")
