@@ -42,6 +42,10 @@
 # install.packages("validate")
 # install.packages("plyr")
 # install.packages("here")
+# install.packages("janitor")
+# install.packages("anytime")
+
+
 
 #Change this as per your computer.
 setwd("C:/Users/ctrapence/Documents")
@@ -51,7 +55,6 @@ library(here)
 library(readxl)
 library(lubridate)
 library(readr)
-library(excel.link)
 library(openxlsx)
 library(data.table)
 library(sqldf)
@@ -63,15 +66,16 @@ library(googledrive)
 library(googlesheets4)
 library(glamr)
 library(gargle)
+library(janitor)
 
 ##Step 2: Global variables
 
 #after this step copy and paste into the R profile script and save
 #now stored so don't have to authenticate
 
-Date=(floor_date(Sys.Date() - months(2), "month"))
+Date=(floor_date(Sys.Date() - months(1), "month"))
 
-reporting_period=floor_date(today()-months(1),"month")
+reporting_period=floor_date(today()-months(0),"month")
 
 
 
@@ -79,9 +83,7 @@ columns<-c("mech_code",'7/31/2021','8/31/2021','9/30/2021' ,'10/31/2021','11/30/
 columns_b<-c('7/31/2021','8/31/2021','9/30/2021' ,'10/31/2021','11/30/2021','12/31/2021','1/31/2022','2/28/2022','3/31/2022','4/30/2022','5/31/2022','6/30/2022','7/31/2022','8/31/2022','9/30/2022' )
 
 #'[Load Data from Individual Partners google sheets for Level one review 
-HIVSA<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/11v2uMvKG2WSsOeKy_KFQEssE5dznkT3-TYzk88gvpuw/edit?usp=drive_link'), sheet = "OVC Indicators") %>% janitor::row_to_names(1) %>% rename('7/31/2021'= `1627689600`,'8/31/2021'= `1630368000`,'9/30/2021'= `1632960000` ,'10/31/2021'= `1635638400`,'11/30/2021'= `1638230400`,
-'12/31/2021'= `1640908800`,'1/31/2022'= `1643587200`,'2/28/2022'= `1646006400`,'3/31/2022'= `1648684800`,'4/30/2022'= `1651276800`,'5/31/2022'= `1653955200`,'6/30/2022'= `1656547200`,'7/31/2022'= `1659225600`,'8/31/2022'= `1661904000`,'9/30/2022'= `1664496000`,'10/31/2022'= `1667174400`,'11/30/2022'= `1669766400`,'12/31/2022'= `1672444800`,
-'1/31/2023'= `1675123200`,'2/28/2023'= `1677542400`,'3/31/2023'= `1680220800`,'4/30/2023'= `1682812800` ,'5/31/2023'= `1685491200`,'6/30/2023'= `1688083200` ,'7/31/2023'= `1690761600`,'8/31/2023'= `1693440000`,'9/30/2023'= `1696032000` )  %>% mutate_if(is.list,as.character)
+HIVSA<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/11v2uMvKG2WSsOeKy_KFQEssE5dznkT3-TYzk88gvpuw/edit?usp=drive_link'), sheet = "OVC Indicators") %>% janitor::row_to_names(1) %>% rename('7/31/2021'= `1627689600`,'8/31/2021'= `1630368000`,'9/30/2021'= `1632960000` ,'10/31/2021'= `1635638400`,'11/30/2021'= `1638230400`,'12/31/2021'= `1640908800`,'1/31/2022'= `1643587200`,'2/28/2022'= `1646006400`,'3/31/2022'= `1648684800`,'4/30/2022'= `1651276800`,'5/31/2022'= `1653955200`,'6/30/2022'= `1656547200`,'7/31/2022'= `1659225600`,'8/31/2022'= `1661904000`,'9/30/2022'= `1664496000`,'10/31/2022'= `1667174400`,'11/30/2022'= `1669766400`,'12/31/2022'= `1672444800`,'1/31/2023'= `1675123200`,'2/28/2023'= `1677542400`,'3/31/2023'= `1680220800`,'4/30/2023'= `1682812800` ,'5/31/2023'= `1685491200`,'6/30/2023'= `1688083200` ,'7/31/2023'= `1690761600`,'8/31/2023'= `1693440000`,'9/30/2023'= `1696032000` ) %>% mutate_if(is.list,as.character)
 HIVSA[columns]<-sapply(HIVSA[columns],as.integer)
 
 FHI360<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1KLFnNV5szfw0Ns1Q4kjV5J2x7qp4biYTeDwU4YMdJlM/edit?usp=drive_link'), sheet = "OVC Indicators") %>% janitor::row_to_names(1) %>% rename('7/31/2021'= `1627689600`,'8/31/2021'= `1630368000`,'9/30/2021'= `1632960000` ,'10/31/2021'= `1635638400`,'11/30/2021'= `1638230400`,
@@ -158,7 +160,7 @@ level2<-dcast(setDT(DQRT_level2),... ~ indicator,value.var = "value") %>% mutate
   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="")
 
 #Check 2:HIVSTAT More that OVC COMPREHENSIVE
-check2<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE)# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
+check2<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="")
 #Check 3:OVC VLS>OVC_VLR
 check3<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="# OVC_VL Suppression >OVC_VL_ELIGIBLE")%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% filter(check3==TRUE) %>% 
   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="")
