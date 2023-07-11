@@ -44,7 +44,6 @@
 # install.packages("anytime")
 
 
-
 library(tidyverse)
 library(here)
 library(readxl)
@@ -168,10 +167,10 @@ check4_FHI360<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(prim
 #'[FHI360 Partner feedback]
 
 
-write.xlsx(check1_FHI360,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_FHI360.xlsx",  sheetName="Check1",append=TRUE)
+write.xlsx(check1_FHI360,"Dataout/DQRT_Feedback_FHI360.xlsx",  sheetName="Check1",append=TRUE)
 
 
-wb<-loadWorkbook("C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_FHI360.xlsx")
+wb<-loadWorkbook("Dataout/DQRT_Feedback_FHI360.xlsx")
 
 addWorksheet(wb,"check2")
 writeData(wb,sheet="check2",x=check2_FHI360)
@@ -185,7 +184,7 @@ writeData(wb,sheet="check4",x=check4_FHI360)
 addWorksheet(wb,sheetName = "Missing_Data")
 writeData(wb,sheet = "Missing_Data",x=Missing_data_FHI360)
 
-saveWorkbook(wb,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_FHI360.xlsx",overwrite = T)
+saveWorkbook(wb,"Dataout/DQRT_Feedback_FHI360.xlsx",overwrite = T)
 #'[FHI360 END]
 
 #'[PACT Partner feedback]
@@ -208,9 +207,9 @@ check3_PACT<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="# OVC_V
 check4_PACT<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>% 
   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="14631")
 
-write.xlsx(check1_PACT,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_PACT.xlsx",  sheetName="Check1",append=TRUE)
+write.xlsx(check1_PACT,"Dataout/DQRT_Feedback_PACT.xlsx",  sheetName="Check1",append=TRUE)
 
-wb<-loadWorkbook("C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_PACT.xlsx")
+wb<-loadWorkbook("Dataout/DQRT_Feedback_PACT.xlsx")
 
 addWorksheet(wb,"check2")
 writeData(wb,sheet="check2",x=check2_PACT)
@@ -224,7 +223,7 @@ writeData(wb,sheet="check4",x=check4_PACT)
 addWorksheet(wb,sheetName = "Missing_Data")
 writeData(wb,sheet = "Missing_Data",x=Missing_data_PACT)
 
-saveWorkbook(wb,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_PACT.xlsx",overwrite = T)
+saveWorkbook(wb,"Dataout/DQRT_Feedback_PACT.xlsx",overwrite = T)
 #'[PACT END]
 
 #'[G2G Partner feedback]
@@ -247,9 +246,9 @@ check3_G2G<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="# OVC_VL
 check4_G2G<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>% 
   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="81904")
 
-write.xlsx(check1_G2G,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_G2G.xlsx",  sheetName="Check1",append=TRUE)
+write.xlsx(check1_G2G,"Dataout/DQRT_Feedback_G2G.xlsx",  sheetName="Check1",append=TRUE)
 
-wb<-loadWorkbook("C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_G2G.xlsx")
+wb<-loadWorkbook("Dataout/DQRT_Feedback_G2G.xlsx")
 
 addWorksheet(wb,"check2")
 writeData(wb,sheet="check2",x=check2_G2G)
@@ -263,7 +262,7 @@ writeData(wb,sheet="check4",x=check4_G2G)
 addWorksheet(wb,sheetName = "Missing_Data")
 writeData(wb,sheet = "Missing_Data",x=Missing_data_G2G)
 
-saveWorkbook(wb,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_G2G.xlsx",overwrite = T)
+saveWorkbook(wb,"Dataout/DQRT_Feedback_G2G.xlsx",overwrite = T)
 #'[G2G END]
 
 #'[M2M Partner feedback]
@@ -272,7 +271,7 @@ Missing_data_M2M<-OutputTableau %>% filter(missing=="Yes") %>% filter(period>=Da
   filter(mech_code=="80004")
 
 #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
-check1_G2G<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>% 
+check1_M2M<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>% 
   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
 
 #Check 2:HIVSTAT More that OVC COMPREHENSIVE
@@ -286,9 +285,9 @@ check3_M2M<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="# OVC_VL
 check4_M2M<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>% 
   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")
 
-write.xlsx(check1_M2M,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_G2G.xlsx",  sheetName="Check1",append=TRUE)
+write.xlsx(check1_M2M,"Dataout/DQRT_Feedback_G2G.xlsx",  sheetName="Check1",append=TRUE)
 
-wb<-loadWorkbook("C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_G2G.xlsx")
+wb<-loadWorkbook("Dataout/DQRT_Feedback_G2G.xlsx")
 
 addWorksheet(wb,"check2")
 writeData(wb,sheet="check2",x=check2_M2M)
@@ -302,7 +301,7 @@ writeData(wb,sheet="check4",x=check4_M2M)
 addWorksheet(wb,sheetName = "Missing_Data")
 writeData(wb,sheet = "Missing_Data",x=Missing_data_M2M)
 
-saveWorkbook(wb,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_M2M.xlsx",overwrite = T)
+saveWorkbook(wb,"Dataout/DQRT_Feedback_M2M.xlsx",overwrite = T)
 #'[M2M END]
 
 
@@ -326,9 +325,9 @@ check3_CINDI<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="# OVC_
 check4_CINDI<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>% 
   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")
 
-write.xlsx(check1_CINDI,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_CINDI.xlsx",  sheetName="Check1",append=TRUE)
+write.xlsx(check1_CINDI,"Dataout/DQRT_Feedback_CINDI.xlsx",  sheetName="Check1",append=TRUE)
 
-wb<-loadWorkbook("C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_CINDI.xlsx")
+wb<-loadWorkbook("Dataout/DQRT_Feedback_CINDI.xlsx")
 
 addWorksheet(wb,"check2")
 writeData(wb,sheet="check2",x=check2_CINDI)
@@ -342,7 +341,7 @@ writeData(wb,sheet="check4",x=check4_CINDI)
 addWorksheet(wb,sheetName = "Missing_Data")
 writeData(wb,sheet = "Missing_Data",x=Missing_data_CINDI)
 
-saveWorkbook(wb,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_CINDI.xlsx",overwrite = T)
+saveWorkbook(wb,"Dataout/DQRT_Feedback_CINDI.xlsx",overwrite = T)
 #'[CINDI END]
 
 
@@ -366,9 +365,9 @@ check3_NACOSA<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="# OVC
 check4_NACOSA<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>% 
   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80008")
 
-write.xlsx(check1_NACOSA,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_NACOSA.xlsx",  sheetName="Check1",append=TRUE)
+write.xlsx(check1_NACOSA,"Dataout/DQRT_Feedback_NACOSA.xlsx",  sheetName="Check1",append=TRUE)
 
-wb<-loadWorkbook("C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_NACOSA.xlsx")
+wb<-loadWorkbook("Dataout/DQRT_Feedback_NACOSA.xlsx")
 
 addWorksheet(wb,"check2")
 writeData(wb,sheet="check2",x=check2_NACOSA)
@@ -383,9 +382,9 @@ addWorksheet(wb,sheetName = "Missing_Data")
 writeData(wb,sheet = "Missing_Data",x=Missing_data_NACOSA)
 #'[NACOSA END]
 
-saveWorkbook(wb,"C:/Users/ctrapence/Documents/Dataout/DQRT_Feedback_NACOSA.xlsx",overwrite = T)
+saveWorkbook(wb,"Dataout/DQRT_Feedback_NACOSA.xlsx",overwrite = T)
 
 
 #'[OVC Dashboard output file
-write.xlsx(OutputTableau,"C:/Users/ctrapence/Documents/Dataout/OutputTableau.xlsx",sheetName="1OutputTableau",apppend=T)
+write.xlsx(OutputTableau,"Dataout/OutputTableau.xlsx",sheetName="1OutputTableau",apppend=T)
 
