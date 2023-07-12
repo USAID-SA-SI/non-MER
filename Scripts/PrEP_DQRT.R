@@ -35,7 +35,6 @@ library(glamr)
 library(gargle)
 
 
-
 ##Step 2: Global variables
 
 #after this step copy and paste into the R profile script and save
@@ -51,7 +50,7 @@ MatCH<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Dfjvf-K7
   indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
 
 
-RTC<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Dfjvf-K7O0q6i6vHQkzNCFfoSkbtMtB7NvT703GvCSY/edit#gid=1044282265k'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
+RTC<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Hc99weOc2CjGCKs3pruJ5_YetSwn02zZp6AhCjj6N1g/edit#gid=2092521029'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
   indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
 
 BRCH<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1vjfCZ2QIjKS2ASfsWq4jHGNot38W_FAiaslOp4YR0sE/edit#gid=1044282265'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
@@ -81,29 +80,60 @@ All_PrEP<-bind_rows(WRHI_70301,WRHI_70306,WRHI_80007,FHI360,ANOVA,BRCH,RTC,MatCH
 Append1<-gather(All_PrEP,period,value,`10/31/2021`:`12/31/2023`) %>% mutate(period=mdy(period)) %>% mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>% mutate(value=abs(value),missing=if_else(  is.na(value),"Yes","No"))%>% 
   group_by( indicator ,partner, mechanismid,country, snu1,snu1id,psnu,psnuuid , kptype,age,sex,period ) %>% summarise(value=sum(value)) %>% mutate(missing=if_else(is.na(value),"Yes","No")) %>%  mutate(flag =(is.na(value)& lag(value))>0)
 
-Missing_data<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period)
+
+#'[WRHI_70301 Feedback Tracker]
+
+Missing_data_WRHI_70301<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70301)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
 
 
-#'[Final import output below]
+#'[WRHI_70306 Feedback Tracker]
+
+Missing_data_WRHI_70306<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70306)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
+
+#'[WRHI_80007 Feedback Tracker]
+
+Missing_data_WRHI_80007<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==80007)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
+#'[RTC Feedback Tracker]
+
+Missing_data_RTC<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70290)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
+#'[BRCH Feedback Tracker]
+
+Missing_data_BRCH<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70287)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
+
+#'[MaTCH Feedback Tracker]
+Missing_data_MaTCH<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==81902)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
+#'[FHI360 Feedback Tracker]
+Missing_data_FHI360<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==82199)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
+
+#'[ANOVA Feedback Tracker]
+
+Missing_data_ANOVA<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70310) %>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
 
 #write_csv(AGYW_DREAMS,"AGYW_PREV_Final.csv")
-wb<-createWorkbook("C:/Users/ctrapence/Documents/Dataout/PrEP_DQRT_Feedback.xlsx")
+wb<-write.xlsx(Missing_data_ANOVA,"Dataout/PrEP_DQRT_Feedback_ANOVA.xlsx",sheetName="Missing Data")
+wb<-write.xlsx(Missing_data_FHI360,"Dataout/PrEP_DQRT_Feedback_FHI360.xlsx",sheetName="Missing Data")
+wb<-write.xlsx(Missing_data_MaTCH,"Dataout/PrEP_DQRT_Feedback_MaTCH.xlsx",sheetName="Missing Data")
+wb<-write.xlsx(Missing_data_BRCH,"Dataout/PrEP_DQRT_Feedback_BRCH.xlsx",sheetName="Missing Data")
+wb<-write.xlsx(Missing_data_RTC,"Dataout/PrEP_DQRT_Feedback_RTC.xlsx",sheetName="Missing Data")
+wb<-write.xlsx(Missing_data_WRHI_80007,"Dataout/PrEP_DQRT_Feedback_WRHI_80007.xlsx",sheetName="Missing Data")
+wb<-write.xlsx(Missing_data_WRHI_70306,"Dataout/PrEP_DQRT_Feedback_WRHI_70306.xlsx",sheetName="Missing Data")
+wb<-write.xlsx(Missing_data_WRHI_70301,"Dataout/PrEP_DQRT_Feedback_WRHI_70301.xlsx",sheetName="Missing Data")
 
-saveWorkbook(wb,"C:/Users/ctrapence/Documents/Dataout/PrEP_DQRT_Feedback.xlsx",overwrite = T)
 
+#'[End ANOVA Feedback Tracker]
 
-wb<-loadWorkbook("C:/Users/ctrapence/Documents/Dataout/PrEP_DQRT_Feedback.xlsx")
+RawData<-Append1 %>% select(indicator,	partner,	mechanismid	,country	,snu1	,snu1id,	psnu,	psnuuid,	age,	sex	,period,	kptype,	value)
 
-addWorksheet(wb,"level1")
-writeData(wb,sheet="level1",x=Missing_data)
+filename<-paste(Sys.Date(), "RawData", ".xlsx")
 
-saveWorkbook(wb,"C:/Users/ctrapence/Documents/Dataout/PrEP_DQRT_Feedback.xlsx",overwrite = T)
-
-#saveWorkbook(wb,"DQRT_Feedback.xlsx",overwrite = T)
-
-filename<-paste(Sys.Date(), "Missing_data", ".xlsx")
-
-openxlsx::write.xlsx(Missing_data, file.path(here("Dataout"),filename))
+openxlsx::write.xlsx(RawData, file.path(here("Dataout"),filename),sheetName="RawData")
 
 
 
