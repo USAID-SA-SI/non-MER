@@ -1,18 +1,14 @@
 # Title: Level Two process
 # Author: C. Trapence
 # Purpose: Automating the process of Reporting AGYW_PREV for Inter-agency
-# Date:2023-07-04
-# Updated:2023:05:04
-#Load Required libraries
+# Date:2023-07-11
+# Updated:2023:07:12
+# Load Required libraries
 # Red text symbolizes comments
 
 #######################################################################################################################
-#  sources files used in the code include:                                                                            #
-#              1) Data Export from CBMIS                                                                              #
-#              2) Host Country Results DREAMS (USG) from DATIM Support                                                #
-#              3) Data Exchange Organisation Units from DATIM Support                                                 #
-#              4) Mechanisms from DATIM support                                                                       #
-#######################################################################################################################
+#  source files used in the code include:                                                                            #
+#              1) Google Sheets                                                                                      #
 
 setwd("C:/Users/ctrapence/Documents")
 
