@@ -76,7 +76,7 @@ columns<-c("mech_code","7/31/2021","8/31/2021","9/30/2021" ,"10/31/2021","11/30/
 columns_b<-c("7/31/2021","8/31/2021","9/30/2021" ,"10/31/2021","11/30/2021","12/31/2021","1/31/2022","2/28/2022","3/31/2022","4/30/2022","5/31/2022","6/30/2022","7/31/2022","8/31/2022","9/30/2022" )
 
 #'[Load Data from Individual Partners google sheets for Level one review 
-HIVSA<-read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/d/11v2uMvKG2WSsOeKy_KFQEssE5dznkT3-TYzk88gvpuw/edit?usp=drive_link"), sheet = "OVC Indicators") %>% janitor::row_to_names(1) %>% rename("7/31/2021"= `1627689600`,"8/31/2021"= `1630368000`,"9/30/2021"= `1632960000` ,"10/31/2021"= `1635638400`,"11/30/2021"= `1638230400`,
+HIVSA<-read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/u/1/d/1-EDzs3Wxf-T6r6SJ_AepsqDbln-LAM8fwy9IPhLvd8g/edit?usp=drive_open&ouid=109338274002987002395#gid=329992892"), sheet = "OVC Indicators") %>% janitor::row_to_names(1) %>% rename("7/31/2021"= `1627689600`,"8/31/2021"= `1630368000`,"9/30/2021"= `1632960000` ,"10/31/2021"= `1635638400`,"11/30/2021"= `1638230400`,
 "12/31/2021"= `1640908800`,"1/31/2022"= `1643587200`,"2/28/2022"= `1646006400`,"3/31/2022"= `1648684800`,"4/30/2022"= `1651276800`,"5/31/2022"= `1653955200`,"6/30/2022"= `1656547200`,"7/31/2022"= `1659225600`,"8/31/2022"= `1661904000`,"9/30/2022"= `1664496000`,"10/31/2022"= `1667174400`,"11/30/2022"= `1669766400`,"12/31/2022"= `1672444800`,
 "1/31/2023"= `1675123200`,"2/28/2023"= `1677542400`,"3/31/2023"= `1680220800`,"4/30/2023"= `1682812800` ,"5/31/2023"= `1685491200`,"6/30/2023"= `1688083200` ,"7/31/2023"= `1690761600`,"8/31/2023"= `1693440000`,"9/30/2023"= `1696032000` ) %>% mutate_if(is.list,as.character)
 HIVSA[columns]<-sapply(HIVSA[columns],as.integer)
@@ -142,6 +142,52 @@ DQRT_level2<-DQRT_level1  %>% filter(year(period)>2022 & age=="<18" &  indicator
 level2<-dcast(setDT(DQRT_level2),... ~ indicator,value.var = "value")%>% mutate(OVC_HIVSTAT=(OVC_HIVSTAT_Negative  +`OVC_HIVSTAT_Positive_Not Receiving ART`+`OVC_HIVSTAT_Positive_Receiving ART`+
                          `OVC_HIVSTAT_Test Not Required`+`OVC_HIVSTAT_Unknown_No HIV Status` )) %>% select(
    primepartner,mech_code,psnu,community,period,age,OVC_HIVSTAT_Negative :OVC_HIVSTAT ) %>% mutate(period=anydate(period)) %>% filter(period>=Date & period<=reporting_period)
+
+
+#'[HIVSA Partner feedback]
+#Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
+check1_HIVSA<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>% 
+  mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
+
+#Check 2:HIVSTAT More that OVC COMPREHENSIVE
+check2_HIVSA<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>% 
+  filter(mech_code=="70307")
+#Check 3:OVC VLS>OVC_VLR
+check3_HIVSA<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="# OVC_VL Suppression >OVC_VL_ELIGIBLE")%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% filter(check3==TRUE) %>% 
+  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
+
+#Check 2:HIVSTAT More that OVC COMPREHENSIVE
+check4_HIVSA<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>% 
+  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
+
+#'[Final import output below]
+
+
+Missing_data_HIVSA<-OutputTableau %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period,indicator_status=="Active",mech_code!=80002) %>%   mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+  filter(mech_code=="70307")
+
+write.xlsx(check1_HIVSA,"Dataout/DQRT_Feedback_HIVSA.xlsx",  sheetName="Check1",append=TRUE)
+
+
+wb<-loadWorkbook("Dataout/DQRT_Feedback_HIVSA.xlsx")
+
+addWorksheet(wb,"check2")
+writeData(wb,sheet="check2",x=check2_HIVSA)
+
+addWorksheet(wb,"check3")
+writeData(wb,sheet="check3",x=check3_HIVSA)
+
+addWorksheet(wb,"check4")
+writeData(wb,sheet="check4",x=check4_HIVSA)
+
+addWorksheet(wb,sheetName = "Missing_Data")
+writeData(wb,sheet = "Missing_Data",x=Missing_data_HIVSA)
+
+saveWorkbook(wb,"Dataout/DQRT_Feedback_HIVSA.xlsx",overwrite = T)
+#'[HIVSA END]
+
+#'[FHI360 Partner feedback]
+
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
   check1_FHI360<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>% 
     mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="14295")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
@@ -163,8 +209,6 @@ check4_FHI360<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(prim
   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="14295")
 
 #'[Final import output below]
-
-#'[FHI360 Partner feedback]
 
 
 write.xlsx(check1_FHI360,"Dataout/DQRT_Feedback_FHI360.xlsx",  sheetName="Check1",append=TRUE)
