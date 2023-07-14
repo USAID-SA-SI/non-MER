@@ -1,6 +1,5 @@
 # Title: Dispatch Tracker
 # Author: C. Trapence
-# Purpose: Automating the process of Reporting AGYW_PREV for Inter-agency
 # Date:2023-07-14
 #Load Required libraries
 # Red text symbolizes comments
