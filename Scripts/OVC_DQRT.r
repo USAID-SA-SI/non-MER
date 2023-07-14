@@ -130,8 +130,7 @@ OutputTableau<-gather(AllData,period,value,`7/31/2021`:`9/30/2023`) %>% mutate(p
      otherdisaggregate , community_status,indicator_status) 
 ###FLAGGING MISSING DATRA FOR CORRECTION
 
-Missing_data_FHI360<-OutputTableau %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period,indicator_status=="Active",mech_code!=80002) %>%   mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
-  filter(mech_code=="14295")
+
 
 #LEVEL 2 Data checks
 
@@ -188,7 +187,8 @@ saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_HIVSA.xlsx",overwrite = T)
 #'[HIVSA END]
 
 #'[FHI360 Partner feedback]
-
+Missing_data_FHI360<-OutputTableau %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period,indicator_status=="Active",mech_code!=80002) %>%   mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+  filter(mech_code=="14295")
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
   check1_FHI360<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>% 
     mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="14295")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
