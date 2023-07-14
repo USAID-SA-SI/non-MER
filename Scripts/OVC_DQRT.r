@@ -63,6 +63,7 @@ library(glamr)
 library(gargle)
 library(janitor)
 
+load_secrets()
 ##Step 2: Global variables
 
 #after this step copy and paste into the R profile script and save
