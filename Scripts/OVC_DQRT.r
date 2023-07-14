@@ -139,10 +139,11 @@ DQRT_level1<-OutputTableau
 DQRT_level2<-DQRT_level1  %>% filter(year(period)>2022 & age=="<18" &  indicator_status =="Active") %>% dplyr::group_by(primepartner,mech_code,psnu,community,age,period,indicator ) %>% dplyr::summarise(value=sum(value))
   #Level Two checks flags
 
-level2<-dcast(setDT(DQRT_level2),... ~ indicator,value.var = "value")%>% mutate(OVC_HIVSTAT=(OVC_HIVSTAT_Negative  +`OVC_HIVSTAT_Positive_Not Receiving ART`+`OVC_HIVSTAT_Positive_Receiving ART`+
-                         `OVC_HIVSTAT_Test Not Required`+`OVC_HIVSTAT_Unknown_No HIV Status` )) %>% select(
-   primepartner,mech_code,psnu,community,period,age,OVC_HIVSTAT_Negative :OVC_HIVSTAT ) %>% mutate(period=anydate(period)) %>% filter(period>=Date & period<=reporting_period)
 
+level2<-dcast(setDT(DQRT_level2),... ~ indicator,value.var = "value") %>% mutate(OVC_HIVSTAT=
+                                                                                   OVC_HIVSTAT_Negative  +`OVC_HIVSTAT_Positive_Not Receiving ART`+`OVC_HIVSTAT_Positive_Receiving ART`+
+                                                                                   `OVC_HIVSTAT_Test Not Required`+`OVC_HIVSTAT_Unknown_No HIV Status`)%>% select( primepartner,mech_code,psnu,community,period,age,OVC_HIVSTAT_Negative :OVC_HIVSTAT ) %>% mutate(period=anydate(period)) %>% filter(period>=Date & period<=reporting_period) %>% 
+  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
 
 #'[HIVSA Partner feedback]
 #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
@@ -193,10 +194,7 @@ Missing_data_FHI360<-OutputTableau %>% filter(missing=="Yes") %>% filter(period>
   check1_FHI360<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>% 
     mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="14295")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
 
-level2<-dcast(setDT(DQRT_level2),... ~ indicator,value.var = "value") %>% mutate(OVC_HIVSTAT=
-                       OVC_HIVSTAT_Negative  +`OVC_HIVSTAT_Positive_Not Receiving ART`+`OVC_HIVSTAT_Positive_Receiving ART`+
-                         `OVC_HIVSTAT_Test Not Required`+`OVC_HIVSTAT_Unknown_No HIV Status`)%>% select( primepartner,mech_code,psnu,community,period,age,OVC_HIVSTAT_Negative :OVC_HIVSTAT ) %>% mutate(period=anydate(period)) %>% filter(period>=Date & period<=reporting_period) %>% 
-  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
 
 #Check 2:HIVSTAT More that OVC COMPREHENSIVE
 check2_FHI360<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>% 
