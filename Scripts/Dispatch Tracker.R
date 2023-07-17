@@ -67,6 +67,8 @@ load_secrets()
 #after this step copy and paste into the R profile script and save
 #now stored so don"t have to authenticate
 
+setwd("C:/Users/ctrapence/Documents")
+
 #'[Load Data from Individual Partners google sheets for Level one review 
 RTC_Dispatch<-read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/d/1Q737L6h3fLBOYpOekbm3pAaIE2AH8Num55JHa1o34KE/edit#gid=2074257105"), sheet = "DispatchTracker") %>%janitor::row_to_names(1) %>% mutate(`Jun2023_Facility Dispatch creation date`=as.numeric(as.character(`Jun2023_Facility Dispatch creation date`)),`Jun2023_Dispatch load date`=as.numeric(as.character(`Jun2023_Dispatch load date`)),
                                                                                                                                                                                                                     `Jun2023_Facility last backup creation date`=as.numeric(as.character(`Jun2023_Facility last backup creation date`))) %>% select(operatingunit,fundingagency,partner,mech_code,snu,psnu,`sub-district` ,orgunit,`orgUnit Operation Status`,`Date Closed (If facility is Closed)`,`Jun2023_Facility Dispatch creation date`,`Jun2023_Dispatch load date`,`Jun2023_Facility last backup creation date` ) %>% mutate(missing=if_else(is.na(`Jun2023_Dispatch load date`) | is.na(`Jun2023_Dispatch load date`)|is.na(`Jun2023_Facility last backup creation date`),"Yes","No")) 
