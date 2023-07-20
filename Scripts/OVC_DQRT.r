@@ -62,6 +62,7 @@ library(googlesheets4)
 library(glamr)
 library(gargle)
 library(janitor)
+library(readr)
 
 load_secrets()
 ##Step 2: Global variables
@@ -430,4 +431,15 @@ saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_NACOSA.xlsx",overwrite = T)
 
 #'[OVC Dashboard output file
 write.xlsx(OutputTableau,"Dataout/OVC_OutputTableau.xlsx",sheetName="1OutputTableau",apppend=T)
+
+Genie<-list.files(here("Data"),pattern="Genie")
+
+Genie_FY23<-read_delim(here::here("Data",Genie)) 
+
+
+
+
+
+
+
 
