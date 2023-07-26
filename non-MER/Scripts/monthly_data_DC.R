@@ -248,7 +248,7 @@ df<-import_table %>%
          period=quarter,
          last_refreshed=last_modified,
          value=indicator_value__datatype_numeric) %>%
-  filter(mon_yr >"2022-06-30" & mon_yr < current_month_full,
+  filter(mon_yr >"2022-06-30" & mon_yr <= current_month_full,
          is_cleared=="TRUE",
          # mon_yr=="2022-07-31" & is_cleared=="TRUE" | mon_yr=="2022-08-31" & is_cleared=="FALSE",
          !is.na(indicator)) %>%
