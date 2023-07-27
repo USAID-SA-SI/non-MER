@@ -384,107 +384,107 @@ nhls<-bind_rows(nhls_c,nhls_h) %>%
 write_tsv(nhls,here("Data/monthly",paste0(current_month,"_nhls_combined_output.txt")),na="")
 
 
-# # REJECTIONS -------------------------------------------------------------------
-#
-# #subset historic rejections as new file has all of 2022
-# historic_rejections_sub<-rejections_h %>%
-#   filter(mon_yr <= current_mo_minus_3)
-#
-# prinf(distinct(historic_rejections_sub,mon_yr))
-#
-#
-# df_vl_rejections<-vl_rejections %>%
-#   clean_names() %>%
-#   filter(vl_results=="REJCT") %>%
-#   select(8:14,16:17,20:21) %>%
-#   # select(8:13,15:16,19:20) %>% #for feb 23 data only - missing field
-#   # mutate(age_category=rejection_code) %>% #for feb 23 data only - missing field
-#   rename(district=district_name,
-#          facility_n=facility_name,
-#          disaggregate=rejection_reason1,
-#          otherdisaggregate=rejection_description,
-#          age=age_category) %>%
-#   mutate(month1=as.character(month1),
-#          year1=as.character(year1),
-#          month1=str_pad(month1, 2, side="left", pad = "0"),
-#          table="NHLS",
-#          district=str_to_title(district),
-#          facility_n=str_to_title(facility_n),
-#          disaggregate=str_to_lower(disaggregate),
-#          disaggregate=str_replace_all(disaggregate," ","_"),
-#          indicator="VL_rejection") %>%
-#   filter(test_method_name=="HIV VIRAL LOAD") %>%
-#   unite(mon_yr,year1,month1,sep="-",remove=TRUE) %>%
-#   select(-sub_district_name) %>%
-#   left_join(nhls_districts,by=c("district"="health_district")) %>%
-#   select(-district, -test_method_name) %>%
-#   left_join(sitelist_district,by="psnuuid") %>%
-#   group_by_if(is.character) %>%
-#   count() %>%
-#   summarize(value = sum(n, na.rm = T)) %>%
-#   ungroup() %>%
-#   filter(mon_yr<=current_month) %>%  #this time only to remove erroneous June
-#   mutate(age=case_when(
-#     age=="20-14" ~ "20-24",
-#     age=="25-19" ~ "25-29",
-#     TRUE ~ age
-#   )) #necessary to fix sept 2022 age typos
-#
-#
-#
-# df_cd4_rejections<-vl_rejections %>%
-#   clean_names() %>%
-#   filter(vl_results=="REJCT") %>%
-#   select(8:14,16:17,20:21) %>%
-#   # select(8:13,15:16,19:20) %>% #for feb 23 data only - missing field
-#   # mutate(age_category=rejection_code) %>% #for feb 23 data only - missing field
-#   rename(district=district_name,
-#          facility_n=facility_name,
-#          disaggregate=rejection_reason1,
-#          otherdisaggregate=rejection_description,
-#          age=age_category) %>%
-#   mutate(month1=as.character(month1),
-#          year1=as.character(year1),
-#          month1=str_pad(month1, 2, side="left", pad = "0"),
-#          table="NHLS",
-#          district=str_to_title(district),
-#          facility_n=str_to_title(facility_n),
-#          disaggregate=str_to_lower(disaggregate),
-#          disaggregate=str_replace_all(disaggregate," ","_"),
-#          indicator="CD4_rejection") %>%
-#   filter(test_method_name=="CD4 ARV") %>%
-#   unite(mon_yr,year1,month1,sep="-",remove=TRUE) %>%
-#   select(-sub_district_name) %>%
-#   left_join(nhls_districts,by=c("district"="health_district")) %>%
-#   select(-district, -test_method_name) %>%
-#   left_join(sitelist_district,by="psnuuid") %>%
-#   group_by_if(is.character) %>%
-#   count() %>%
-#   summarize(value = sum(n, na.rm = T)) %>%
-#   ungroup() %>%
-#   filter(mon_yr<=current_month) %>%
-#   mutate(age=case_when(
-#     age=="20-14" ~ "20-24",
-#     age=="25-19" ~ "25-29",
-#     TRUE ~ age
-#   )) #necessary to fix sept 2022 age typos
-#
-#
-# current_rejections<-bind_rows(df_vl_rejections,df_cd4_rejections)
-#
-# rejections_check<-current_rejections %>%
-#   group_by(indicator,mon_yr) %>%
-#   summarize_at(vars(value),sum,na.rm=TRUE)
-#
-# rejections_combined<-bind_rows(current_rejections,historic_rejections_sub) %>%
-#   mutate(indicator=case_when(
-#     indicator=="VL_rejection" ~ "VL_REJECTION",
-#     indicator=="CD4_rejection" ~ "CD4_REJECTION",
-#     TRUE ~ indicator,
-#   ))
-#
-# #export combined rejections file for use next month
-# write_tsv(rejections_combined,here("Data/monthly",paste0(current_month,"_rejections_combined_output.txt")),na="")
+# REJECTIONS -------------------------------------------------------------------
+
+#subset historic rejections as new file has all of 2022
+historic_rejections_sub<-rejections_h %>%
+  filter(mon_yr <= current_mo_minus_3)
+
+prinf(distinct(historic_rejections_sub,mon_yr))
+
+
+df_vl_rejections<-vl_rejections %>%
+  clean_names() %>%
+  filter(vl_results=="REJCT") %>%
+  select(8:14,16:17,20:21) %>%
+  # select(8:13,15:16,19:20) %>% #for feb 23 data only - missing field
+  # mutate(age_category=rejection_code) %>% #for feb 23 data only - missing field
+  rename(district=district_name,
+         facility_n=facility_name,
+         disaggregate=rejection_reason1,
+         otherdisaggregate=rejection_description,
+         age=age_category) %>%
+  mutate(month1=as.character(month1),
+         year1=as.character(year1),
+         month1=str_pad(month1, 2, side="left", pad = "0"),
+         table="NHLS",
+         district=str_to_title(district),
+         facility_n=str_to_title(facility_n),
+         disaggregate=str_to_lower(disaggregate),
+         disaggregate=str_replace_all(disaggregate," ","_"),
+         indicator="VL_rejection") %>%
+  filter(test_method_name=="HIV VIRAL LOAD") %>%
+  unite(mon_yr,year1,month1,sep="-",remove=TRUE) %>%
+  select(-sub_district_name) %>%
+  left_join(nhls_districts,by=c("district"="health_district")) %>%
+  select(-district, -test_method_name) %>%
+  left_join(sitelist_district,by="psnuuid") %>%
+  group_by_if(is.character) %>%
+  count() %>%
+  summarize(value = sum(n, na.rm = T)) %>%
+  ungroup() %>%
+  filter(mon_yr<=current_month) %>%
+  mutate(age=case_when(
+    age=="20-14" ~ "20-24",
+    age=="25-19" ~ "25-29",
+    TRUE ~ age
+  )) #necessary to fix sept 2022 age typos
+
+
+
+df_cd4_rejections<-vl_rejections %>%
+  clean_names() %>%
+  filter(vl_results=="REJCT") %>%
+  select(8:14,16:17,20:21) %>%
+  # select(8:13,15:16,19:20) %>% #for feb 23 data only - missing field
+  # mutate(age_category=rejection_code) %>% #for feb 23 data only - missing field
+  rename(district=district_name,
+         facility_n=facility_name,
+         disaggregate=rejection_reason1,
+         otherdisaggregate=rejection_description,
+         age=age_category) %>%
+  mutate(month1=as.character(month1),
+         year1=as.character(year1),
+         month1=str_pad(month1, 2, side="left", pad = "0"),
+         table="NHLS",
+         district=str_to_title(district),
+         facility_n=str_to_title(facility_n),
+         disaggregate=str_to_lower(disaggregate),
+         disaggregate=str_replace_all(disaggregate," ","_"),
+         indicator="CD4_rejection") %>%
+  filter(test_method_name=="CD4 ARV") %>%
+  unite(mon_yr,year1,month1,sep="-",remove=TRUE) %>%
+  select(-sub_district_name) %>%
+  left_join(nhls_districts,by=c("district"="health_district")) %>%
+  select(-district, -test_method_name) %>%
+  left_join(sitelist_district,by="psnuuid") %>%
+  group_by_if(is.character) %>%
+  count() %>%
+  summarize(value = sum(n, na.rm = T)) %>%
+  ungroup() %>%
+  filter(mon_yr<=current_month) %>%
+  mutate(age=case_when(
+    age=="20-14" ~ "20-24",
+    age=="25-19" ~ "25-29",
+    TRUE ~ age
+  )) #necessary to fix sept 2022 age typos
+
+
+current_rejections<-bind_rows(df_vl_rejections,df_cd4_rejections)
+
+rejections_check<-current_rejections %>%
+  group_by(indicator,mon_yr) %>%
+  summarize_at(vars(value),sum,na.rm=TRUE)
+
+rejections_combined<-bind_rows(current_rejections,historic_rejections_sub) %>%
+  mutate(indicator=case_when(
+    indicator=="VL_rejection" ~ "VL_REJECTION",
+    indicator=="CD4_rejection" ~ "CD4_REJECTION",
+    TRUE ~ indicator,
+  ))
+
+#export combined rejections file for use next month
+write_tsv(rejections_combined,here("Data/monthly",paste0(current_month,"_rejections_combined_output.txt")),na="")
 
 # MER TARGETS ------------------------------------------------------------------
 targets<-mer %>%
@@ -527,7 +527,7 @@ final_df<-df_current %>%
   mutate(indicator2=indicator,
          value2=value) %>%
   spread(indicator2,value2) %>%
-  bind_rows(nhls) #did not process rejections this month - add this back in next time rejections_combined
+  bind_rows(nhls, rejections_combined)
   # clean_psnu()
 
 
