@@ -15,16 +15,13 @@ library(RPostgreSQL)
 library(googledrive)
 library(googlesheets4)
 
-#set_here(path='C:/Users/qs19802/Dropbox/GitHub')
-
-
 # install.packages("devtools")
 # devtools::install_github("USAID-OHA-SI/Wavelength")
 # devtools::install_github("sicarul/redshiftTools")
 
 
 # CREDENTIALS ------------------------------------------------------------------
-set_datim() #from glamr - only need to run once to store credentials
+#set_datim() #from glamr - only need to run once to store credentials
 
 
 load_secrets() #loads credentials once stored once using above line
@@ -73,10 +70,10 @@ conn <- aws_connect(db_name = db_name, db_user = db_user,
 
 
 # GLOBALS ----------------------------------------------------------------------
-current_month<-"2023-06" # CHANGE EACH MONTH
-current_month_full<-"2023-06-30" # CHANGE EACH MONTH
-last_month<- "2023-05" #CHANGE EACH MONTH
-current_mo_minus_3<- "2023-03" #CHANGE EACH MONTH
+current_month<-"2023-07" # CHANGE EACH MONTH
+current_month_full<-"2023-07-31" # CHANGE EACH MONTH
+last_month<- "2023-06" #CHANGE EACH MONTH
+current_mo_minus_3<- "2023-04" #CHANGE EACH MONTH
 lastQmo<-"2023-06" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"kkehoe"
@@ -495,9 +492,10 @@ targets<-mer %>%
          standardizeddisaggregate %in% c("Total Numerator", "Total Denominator")) %>%
   reshape_msd(direction="long",include_type = TRUE) %>%
   select(orgunituid,sitename,funding_agency,indicator,mech_code,operatingunit,prime_partner_name,
-         psnu,snu1,facility,facilityuid,disaggregate,period,period_type,value) %>%
+         psnu,snu1,facility,facilityuid,standardizeddisaggregate,period,period_type,value) %>%
   rename(orgunit_uid=orgunituid,
-         orgunit_name=sitename) %>%
+         orgunit_name=sitename,
+         disaggregate=standardizeddisaggregate) %>% #removed disaggregate from Genie - need to use ststandardizeddisaggregate now
   mutate(table="mer") %>%
     # indicator=case_when(
     #   indicator=="TX_CURR" ~ "TX_CURR_28",
@@ -533,7 +531,7 @@ final_df<-df_current %>%
 
 
 # EXPORT FILE ------------------------------------------------------------------
-filename<-paste(current_month_full,"monthly_nonmer_data_combined_v2.0.txt",sep="_")
+filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.0.txt",sep="_")
 
 write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
