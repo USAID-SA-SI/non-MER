@@ -128,9 +128,11 @@ AllData<-bind_rows(NACOSA_All,FHI360,CINDI,G2G,M2M,PACT,HIVSA)
 
 OutputTableau<-gather(AllData,period,value,`7/31/2021`:`9/30/2023`) %>% mutate(period=mdy(period)) %>% mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>% mutate(value=abs(value),missing=if_else(  is.na(value),"Yes","No"))%>% 
   group_by( mech_code ,primepartner, psnu,community,indicator ,last_refreshed,disaggregate , age,otherdisaggregate , community_status,indicator_status, Start_Date,period,period_type  ,missing ) %>% summarise(value=sum(value)) %>% select(mech_code ,primepartner, psnu,community,indicator,value ,Start_Date,period,last_refreshed,missing,period_type,age,disaggregate ,
-     otherdisaggregate , community_status,indicator_status) 
-###FLAGGING MISSING DATRA FOR CORRECTION
+     otherdisaggregate , community_status,indicator_status) %>% mutate(datasource="GoogleDrive",valuetype="Results") %>% mutate(partnershort=if_else(mech_code == 80008  | mech_code== 80002,"NACOSA",primepartner)) %>% filter(indicator_status=="Active")
 
+
+
+###FLAGGING MISSING DATRA FOR CORRECTION
 
 
 #LEVEL 2 Data checks
@@ -174,7 +176,7 @@ write.xlsx(check1_HIVSA,"Dataout/OVC_DQRT_Feedback_HIVSA.xlsx",  sheetName="Chec
 wb<-loadWorkbook("Dataout/OVC_DQRT_Feedback_HIVSA.xlsx")
 
 addWorksheet(wb,"check2")
-writeData(wb,sheet="check2",x=check2_HIVSA)
+writeData(wb,sheet="check2",check2_HIVSA)
 
 addWorksheet(wb,"check3")
 writeData(wb,sheet="check3",x=check3_HIVSA)
@@ -432,14 +434,212 @@ saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_NACOSA.xlsx",overwrite = T)
 #'[OVC Dashboard output file
 write.xlsx(OutputTableau,"Dataout/OVC_OutputTableau.xlsx",sheetName="1OutputTableau",apppend=T)
 
-Genie<-list.files(here("Data"),pattern="Genie")
-
-Genie_FY23<-read_delim(here::here("Data",Genie)) 
 
 
-
-
-
-
-
-
+#' #Skipping Tableau Prep Script file
+#' 
+#' 
+#' 
+#' OutputTableau2<- OutputTableau%>%   mutate(standardizedDisaggregate=if_else (indicator == "OVC_HIVSTAT_Positive_Receiving ART" | indicator == "OVC_HIVSTAT_Test Not Required" | indicator== "OVC_HIVSTAT_Positive_Not Receiving ART" | indicator == "OVC_HIVSTAT_Negative" | indicator == "OVC_HIVSTAT_Unknown_No HIV Status",  "ReportedStatus",
+#'                                                                            if_else(indicator == "OVC_SERV_ Preventive" ,"Age/Sex/Preventive",if_else(indicator == "OVC_SERV_DREAMS" , "Age/Sex/DREAMS",if_else(indicator =="OVC_SERV_Comprehensive" & disaggregate == "Secondary Education" ,  "Age/Sex/ProgramStatus",if_else(indicator== "OVC_SERV_Comprehensive" & age == "<18" ,  "Age/Sex/ProgramStatus",
+#'                                                                                                                                                                                                                                                                                                                                  if_else(indicator== "OVC_SERV_Comprehensive" & disaggregate == "Caregivers" , "Age/Sex/ProgramStatusCaregiver",if_else(indicator== "OVC_SERV_EWG_Service Lapse" , "ProgramStatus", 
+#'                                                                                                                                                                                                                                                                                                                                                                                                                                                         if_else(indicator== "OVC_SERV_Potentially Active" , "ProgramStatus",""))) ))))))
+#' OutputTableau3<-OutputTableau2 %>%  mutate(statushiv=indicator,disaggregate=standardizedDisaggregate) %>% mutate(yearquarter=if_else(period=="2021-07-31"  , "FY2021Q4",if_else(
+#'   period=="2021-08-31"  , "FY2021Q4",if_else(  period=="2021-09-30"  ,"FY2021Q4",if_else( period=="2021-10-31"  , "FY2022Q1",if_else( period=="2021-11-30"  , "FY2022Q1",if_else(
+#'     period=="2021-12-31"  , "FY2022Q1",if_else(  period=="2022-01-31"  ,"FY2022Q2",if_else(period=="2022-02-28"  , "FY2022Q2",if_else(  period=="2022-03-31"  , "FY2022Q2",if_else(
+#'       period=="2022-04-30"  , "FY2022Q3",if_else(  period=="2022-05-31"  , "FY2022Q3",if_else(  period=="2022-06-30"  , "FY2022Q3",if_else(  period=="2022-07-31"  , "FY2022Q4",if_else(
+#'         period=="2022-08-31"  , "FY2022Q4",if_else(  period=="2022-09-30"  , "FY2022Q4",if_else(  period=="2022-10-31"  , "FY2023Q1",if_else(  period=="2022-11-30"  , "FY2023Q1",if_else(
+#'           period=="2022-12-31"  , "FY2023Q1",if_else(  period=="2023-01-31"  , "FY2023Q2",if_else(  period=="2023-02-28"  , "FY2023Q2",if_else(  period=="2023-03-31"  , "FY2023Q2",if_else(
+#'             period=="2023-04-30"  , "FY2023Q3",if_else(  period=="2023-05-31"  , "FY2023Q3",if_else(  period=="2023-06-30"  , "FY2023Q3",if_else(  period=="2023-07-31"  , "FY2023Q4",if_else(
+#'               period=="2023-08-31"  , "FY2023Q4",if_else(  period=="2023-09-30"  , "FY2023Q4"," "))))))))))))))))))))))))))))
+#' 
+#' 
+#' OutputTableau4<-OutputTableau3%>% mutate(fiscal_year=case_when(yearquarter=="FY2020Q4" ~ "FY2020",
+#'                                                                yearquarter=="FY2021Q1" ~ "FY2021",
+#'                                                                yearquarter=="FY2021Q2" ~ "FY2021",
+#'                                                                yearquarter=="FY2021Q3" ~ "FY2021",
+#'                                                                yearquarter=="FY2021Q4" ~ "FY2021",
+#'                                                                yearquarter=="FY2022Q1" ~ "FY2022",
+#'                                                                yearquarter=="FY2022Q2" ~ "FY2022",
+#'                                                                yearquarter=="FY2022Q3" ~ "FY2022",
+#'                                                                yearquarter=="FY2022Q4" ~ "FY2022",
+#'                                                                yearquarter=="FY2023Q1" ~ "FY2023",
+#'                                                                yearquarter=="FY2023Q2" ~ "FY2023",
+#'                                                                yearquarter=="FY2023Q3" ~ "FY2023",
+#'                                                                yearquarter=="FY2023Q4" ~ "FY2023",FALSE~""))
+#' 
+#' OutputTableau5<-OutputTableau4 %>% mutate(otherDisaggregate=if_else(indicator =="OVC_HIVSTAT_Negative" , "",if_else(indicator == "OVC_HIVSTAT_Positive_Not Receiving ART" , "Not Receiving ART",if_else(
+#'   indicator== "OVC_HIVSTAT_Positive_Receiving ART" , "Receiving ART",if_else(indicator== "OVC_HIVSTAT_Test Not Required" , "Test Not Required",if_else(indicator== "OVC_HIVSTAT_Unknown_No HIV Status" , "No HIV Status",
+#'                                                                                                                                                        if_else(indicator== "OVC_SERV_EWG_Service Lapse" , "Exited without Graduation",if_else(indicator== "OVC_SERV_Potentially Active" , "Potentially Active","")))))))) %>% 
+#'   mutate(age=if_else(age == "<18" , "<18",if_else(age== "18+" , "18+" ,if_else(age == "18-20" , "18-20", if_else( indicator== "OVC_SERV_ Preventive" , "<18",if_else (indicator== "OVC_SERV_DREAMS" , "<18","")))))) %>% mutate(funding_agency="USAID") %>% rename(prime_partner_name=primepartner) %>%
+#'   mutate(indicator=if_else(indicator=="OVC_SERV_Potentially Active","OVC_SERV",indicator)) %>% group_by_all() %>% summarise(value=sum(value)) %>% mutate(operatingunituid="cDGPF739ZZr",country="South Africa") %>% mutate(orgunituid=		
+#' case_when(community=="ec Amahlathi Local Municipality" ~	"XzKgahqXvhA"	,
+#' community=="ec Buffalo City Local Municipality" ~	"QPEuCIzKBZb"	,
+#' community=="ec Emalahleni Local Municipality" ~	"NlhPVQEKfmH"	,
+#' community=="ec Engcobo Health sub-District" ~	"diGGc8zzqNf"	,
+#' community=="ec Enoch Mgijima Local Municipality" ~	"uwZ6kIFBeRN"	,
+#' community=="ec Ingquza Hill Local Municipality" ~	"Ui5a3DF84Vw"	,
+#' community=="ec Intsika Yethu Local Municipality" ~	"LzI1Aqz2zE0"	,
+#' community=="ec King Sabata Dalindyebo Local Municipality" ~	"m9Q4H1NiXPQ"	,
+#' community=="ec Matatiele Local Municipality" ~	"CslOGPFjCGC"	,
+#' community=="ec Mbhashe Local Municipality" ~	"BmB1vGlbHa0"	,
+#' community=="ec Mbizana Local Municipality" ~	"Mqgc8hLJZmu"	,
+#' community=="ec Mnquma Local Municipality" ~	"Lb4ba8PPgPS"	,
+#' community=="ec Ntabankulu Local Municipality" ~	"h1Y6W3XNp4R"	,
+#' community=="ec Nyandeni Health sub-District" ~	"VDhJfm06Jkv"	,
+#' community=="ec Port St Johns Local Municipality" ~	"eH8Yqx05VGU"	,
+#' community=="ec Raymond Mhlaba Local Municipality" ~	"XeyQABePuXa"	,
+#' community=="ec Umzimvubu Health sub-District" ~	"w589pQ7mkgb"	,
+#' community=="fs Dihlabeng Local Municipality" ~	"b0AuEG9wuo7"	,
+#' community=="fs Maluti-a-Phofung Local Municipality"~	"FXwsp2b12ba"	,
+#' community=="fs Mantsopa Local Municipality" ~	"x1Ls7DEDROq"	,
+#' community=="fs Masilonyana Local Municipality" ~	"Zffl7AthEEm"	,community=="fs Matjhabeng Local Municipality" ~	"C8bcDMSOBNS"	,
+#' community=="fs Nala Local Municipality" ~	"uG0iBmY9x7S"	,
+#' community=="fs Nketoana Local Municipality" ~	"Nu19DAcL0eE"	,
+#' community=="fs Phumelela Local Municipality" ~	"Oo1o6LUGLtI"	,
+#' community=="fs Setsoto Local Municipality" ~	"J2pT6LrlERj"	,
+#' community=="gp Ekurhuleni East 1 Local Municipality" ~	"c8P5lXZo5U1"	,
+#' community=="gp Ekurhuleni East 2 Local Municipality" ~	"xMTTHM2fftG"	,
+#' community=="gp Ekurhuleni North 1 Health sub-District" ~	"LxMoklHIayz"	,
+#' community=="gp Ekurhuleni North 1 Local Municipality" ~	"LxMoklHIayz"	,
+#' community=="gp Ekurhuleni North 2 Health sub-District" ~	"K9GdUGILK1S"	,
+#' community=="gp Ekurhuleni South 1 Local Municipality" ~	"OoScyXDPGtM"	,
+#' community=="gp Ekurhuleni South 2 Local Municipality" ~	"hGT2SBC4dH3"	,
+#' community=="gp Emfuleni Local Municipality" ~	"hmFJXC3ZOPj"	,
+#' community=="gp Johannesburg A Health sub-District" ~	"mr2p5Mqbony"	,
+#' community=="gp Johannesburg B Health sub-District" ~	"O6HPLoa2WbQ"	,
+#' community=="gp Johannesburg C Health sub-District" ~	"o0CzjRVpRJ6"	,
+#' community=="gp Johannesburg D Health sub-District" ~	"zf2BeMdf62h"	,
+#' community=="gp Johannesburg E Health sub-District" ~	"a5UyMYoJiBB"	,
+#' community=="gp Johannesburg F Health sub-District" ~	"oI1rnMlEJz1"	,
+#' community=="gp Johannesburg G Health sub-District" ~	"DPnhkLN88vc"	,community=="gp Tshwane 1 Local Municipality" ~	"qLQnLlFj8TL"	,
+#' community=="gp Tshwane 2 Local Municipality" ~	"Jgd0zBKuHbm"	,
+#' community=="gp Tshwane 3 Local Municipality" ~	"vQ3MumZt4Ie"	,
+#' community=="gp Tshwane 4 Local Municipality" ~	"f3ZdI0ihEQE"	,
+#' community=="gp Tshwane 5 Local Municipality" ~	"PSDpC7k4tvo"	,
+#' community=="gp Tshwane 6 Local Municipality" ~	"UmwGr8Tv38c"	,
+#' community=="gp Tshwane 7 Local Municipality" ~	"PHv1qPlJD91"	,
+#' community=="kz Abaqulusi Local Municipality" ~	"VQ81fQp6JGu"	,
+#' community=="kz Alfred Duma Local Municipality"~	"cROE42XaZhr"	,
+#' community=="kz City of uMhlathuze Local Municipality" ~	"QAP8Lt9EWhI"	,
+#' community=="kz Edumbe Local Municipality" ~	"e75DWL3OSX3"	,
+#' community=="kz Emnambithi Local Municipality" ~	"Vwj3TmjnRd0"	,
+#' community=="kz eThekwini Metropolitan Municipality Sub" ~	"NlX1mBFnTfd"	,
+#' community=="kz Impendle Local Municipality" ~	"pKpJB0to5Hc"	,
+#' community=="kz Inkosi Langalibalele Local Municipality" ~	"DOs1dhcqU78"	,
+#' community=="kz Msunduzi Local Municipality" ~	"Hadi7Geu8w2"	,
+#' community=="kz Mthonjaneni Local Municipality" ~	"cfqLGWHRA06"	,
+#' community=="kz Nkandla Local Municipality" ~	"u5tDFzWbCwA"	,
+#' community=="kz Nongoma Local Municipality" ~	"MmbSZqsjiPt"	,
+#' community=="kz Okhahlamba Local Municipality" ~	"dvHSbaM5yjN"	,
+#' community=="kz Ray Nkonyeni Local Municipality" ~	"XWzywhO0xak"	,
+#' community=="kz Richmond Local Municipality" ~"Fdr6Wsz9ior"	,
+#' community=="kz Ubuhlebezwe Local Municipality" ~	"GqopJ97KaAW"	,
+#' community=="kz Ulundi Local Municipality" ~	"eQLaDwaqBbT"	,
+#' community=="kz Umdoni Local Municipality" ~	"q9hs4q9W9FE"	,
+#' community=="kz uMfolozi Local Municipality" ~	"oiukKexEqh4"	,
+#' community=="kz uMlalazi Local Municipality" ~	"pWdHN41uiRP"	,
+#' community=="kz Umtshezi Local Municipality" ~	"qM89xYLRdqK"	,
+#' community=="kz uMuziwabantu Local Municipality" ~	"DdUJ8eMODYD"	,
+#' community=="kz Umzimkhulu Local Municipality" ~	"ZGpw4FGxMqO"	,
+#' community=="kz Umzumbe Local Municipality" ~	"Rt8UXcd34h5"	,
+#' community=="kz uPhongolo Local Municipality" ~	"oE1zSYtAqqW"	,
+#' community=="lp Ba-Phalaborwa Local Municipality" ~	"z1tNxqzlzwn"	,
+#' community=="lp Blouberg Local Municipality" ~	"k6WaAJ5EcLH"	,
+#' community=="lp Greater Giyani Local Municipality" ~	"gvb9vE05rpo"	,
+#' community=="lp Greater Letaba Local Municipality" ~	"j3cmhkFeTDD"	,
+#' community=="lp Greater Tzaneen Local Municipality" ~	"igxBmx3z9SL"	,
+#' community=="lp Lepelle-Nkumpi Local Municipality" ~	"o5VGD8sDmFr"	,
+#' community=="lp Maruleng Local Municipality" ~	"Ek0jh44N5so"	,
+#' community=="lp Molemole Local Municipality" ~	"tRNrjkKndew"	,
+#' community=="lp Polokwane Local Municipality" ~	"skpQVcIzxkE"	,
+#' community=="mp Bushbuckridge Local Municipality" ~	"pQcaBXpjH4u"	,
+#' community=="mp Chief Albert Luthuli Local Municipality" ~	"Bb6SoYxKBW9"	,
+#' community=="mp City of Mbombela Local Municipality" ~	"Ea0tiOAhfQE"	,
+#' community=="mp Dipaleseng Local Municipality" ~	"CmgIA6ZasEa"	,
+#' community=="mp Dr JS Moroka Local Municipality" ~	"o8O6rw75u3H"	,
+#' community=="mp Dr Pixley Ka Isaka Seme Local Municipality" ~	"hobSH0yvAJF"	,
+#' community=="mp Emakhazeni Local Municipality" ~"OH11IZTTb7Z"	,
+#' community=="mp Emalahleni Local Municipality" ~	"wb9AlnMQ7Ly"	,
+#' community=="mp Govan Mbeki Local Municipality" ~	"rWsVQAMbvld"	,
+#' community=="mp Lekwa Local Municipality" ~	"PrHEQZZRBZy"	,
+#' community=="mp Mkhondo Local Municipality" ~	"B7fgWZECPeK"	,
+#' community=="mp Msukaligwa Local Municipality" ~	"tKDzivBHmnD"	,
+#' community=="mp Nkomazi Local Municipality" ~	"gUzBGRaXFU4"	,
+#' community=="mp Steve Tshwete Local Municipality" ~	"OOLXsiOmElr"	,
+#' community=="mp Thaba Chweu Local Municipality" ~	"eFtwFu6uCTv"	,
+#' community=="mp Thembisile Hani Local Municipality" ~	"M7k2FwX2pQy"	,
+#' community=="mp Victor Khanye Local Municipality" ~	"Jgob3l0wKys"	,
+#' community=="nw City of Matlosana Local Municipality" ~	"pJ86GOgGlui"	,
+#' community=="nw Ditsobotla Local Municipality" ~	"NVWLiqrB9Px"	,
+#' community=="nw JB Marks Local Municipality" ~	"o6waNef1lli"	,
+#' community=="nw Kgetlengrivier Local Municipality" ~	"kBV9TLdRSjf"	,
+#' community=="nw Madibeng Local Municipality" ~	"rBDCWqb7seg"	,
+#' community=="nw Mahikeng Local Municipality" ~	"BmhJTZsfLqG"	,
+#' community=="nw Moretele Local Municipality" ~	"wmJR8FCgTft"	,
+#' community=="nw Moses Kotane Local Municipality" ~	"NSwQM3Xjw3K"	,
+#' community=="nw Ramotshere Moiloa Local Municipality" ~	"Pph7m8P4iYR"	,
+#' community=="nw Rustenburg Local Municipality" ~	"MzXMAlDmVYp"	,
+#' community=="nw Tswaing Local Municipality" ~	"u12pB1p4FXC"	,
+#' community=="wc Cape Town Eastern Health sub-District" ~	"P7uLfoPWa2j"	,
+#' community=="wc Cape Town Northern Health sub-District" ~	"Tpye0N2eFz6"	,
+#' community=="wc Cape Town Southern Health sub-District" ~	"mzomxZiNvUH"	,
+#' community=="wc Cape Town Western Health sub-District" ~	"gnyeVm1kO0r"	,
+#' community=="wc Khayelitsha Health sub-District"~	"v9XCremlqAX"	,
+#' community=="wc Mitchells Plain Health sub-District" ~"awPTFCVyuH5"	,
+#' community=="wc Tygerberg Health sub-District" ~"Qbw8XUMuPDe"	,TRUE~""))
+#' 
+#' Genie<-list.files(here("Data"),pattern="Genie-SITE")
+#' 
+#' Genie_FY23<-read_delim(here::here("Data",Genie)) %>% filter(indicator=="OVC_HIVSTAT" | indicator=="OVC_HIVSTAT_NEG" | indicator=="OVC_HIVSTAT_POS" | indicator=="OVC_SERV" | indicator=="OVC_SERV_ACTIVE"| indicator=="OVC_SERV_GRADUATED" |
+#' indicator=="OVC_SERV_OVER_18" | indicator=="OVC_SERV_UNDER_18") %>%  mutate(psnushort=psnu,datasource="Genie") %>% mutate(prime_partner_name=case_when(prime_partner_name=="TBD" &funding_agency=="USAID"~"G2G",TRUE~prime_partner_name))
+#' 
+#' Genie_FY23v1<-Genie_FY23 %>% mutate(partnershort=if_else(mech_code=="80008" |mech_code=="80002","NACOSA" ,prime_partner_name)) %>% rename(age=ageasentered) %>% mutate(period="DATIM QUARTERS") %>% mutate(partnershort=
+#' if_else(partnershort=="HIVS","HIVSA",partnershort)) %>%pivot_longer(cols=targets:cumulative,names_to = "valuetype_original",values_to = "value") %>% mutate(value_type=if_else(valuetype_original=="qtr1"| valuetype_original=="qtr2" | valuetype_original=="qtr3" |
+#' valuetype_original=="qtr4" | valuetype_original=="cumulative", "Results"    ,"Targets"  )) %>% mutate(yearquarter=case_when(fiscal_year == 2020 & valuetype_original == "qtr1" ~ "FY2020Q1" ,
+#' 
+#'                                                                                                                             fiscal_year == 2020 & valuetype_original == "qtr2"~"FY2020Q2",
+#'                                                                                                                             fiscal_year == 2020 & valuetype_original== "qtr3" ~ "FY2020Q3",
+#'                                                                                                                             fiscal_year == 2020 & valuetype_original == "qtr4" ~ "FY2020Q4",
+#'                                                                                                                             fiscal_year == 2021 & valuetype_original == "qtr1" ~ "FY2021Q1",
+#'                                                                                                                             fiscal_year == 2021 & valuetype_original== "qtr2" ~ "FY2021Q2",
+#'                                                                                                                             fiscal_year == 2021 & valuetype_original == "qtr3" ~ "FY2021Q3",
+#'                                                                                                                             fiscal_year == 2021 & valuetype_original == "qtr4" ~ "FY2021Q4",
+#'                                                                                                                             fiscal_year == 2022 & valuetype_original == "qtr1" ~ "FY2022Q1",
+#'                                                                                                                             fiscal_year == 2022 & valuetype_original == "qtr2" ~ "FY2022Q2",
+#'                                                                                                                             fiscal_year == 2022 & valuetype_original == "qtr3" ~ "FY2022Q3",
+#'                                                                                                                             fiscal_year == 2022 & valuetype_original == "qtr4" ~ "FY2022Q4",
+#'                                                                                                                             fiscal_year == 2020 & valuetype_original == "cumulative" ~ "FY2020Annual",
+#'                                                                                                                             fiscal_year == 2021 & valuetype_original == "cumulative" ~ "FY2021Annual",
+#'                                                                                                                             fiscal_year == 2022 & valuetype_original == "cumulative" ~ "FY2022Annual",
+#'                                                                                                                             fiscal_year == 2020 & valuetype_original == "targets" ~ "FY2020Target",
+#'                                                                                                                             fiscal_year == 2021 & valuetype_original == "targets" ~ "FY2021Target",
+#'                                                                                                                             fiscal_year == 2022 & valuetype_original == "targets" ~ "FY2022Target",
+#'                                                                                                                             fiscal_year == 2023 & valuetype_original == "qtr1" ~ "FY2023Q1",
+#'                                                                                                                             fiscal_year == 2023 & valuetype_original == "qtr2" ~ "FY2023Q2",
+#'                                                                                                                             fiscal_year == 2023 & valuetype_original == "qtr3" ~ "FY2023Q3",
+#'                                                                                                                             fiscal_year == 2023 & valuetype_original == "qtr4" ~ "FY2023Q4",
+#'                                                                                                                             fiscal_year == 2023 & valuetype_original == "cumulative" ~ "FY2023Annual",
+#'                                                                                                                             fiscal_year == 2023 & valuetype_original == "targets" ~ "FY2023Target")) %>%
+#'   mutate(result_source=if_else(valuetype_original=="Results" , "Genie","Null")) %>% mutate(mech_code=as.integer(mech_code)) %>% mutate(period=as.character(period)) %>% mutate(fiscal_year=as.character(fiscal_year))
+#' 
+#' 
+#'                                                                                                       
+#'                                                                                                       
+#'                                                                                                     
+#'   final_datset<-bind_rows(OutputTableau5,Genie_FY23v1 )                                                                                               
+#'                                                                                                       
+#'                                                                                                       
+#' #'[OVC Dashboard output file
+#' write.xlsx(OutputTableau,"Dataout/OVC_OutputTableau.xlsx",sheetName="1OutputTableau",apppend=T)                                                                                            
+#'                                                                                                       
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 
+#' 

@@ -29,6 +29,8 @@ library(googledrive)
 library(googlesheets4)
 library(glamr)
 library(gargle)
+library(tcltk2)
+library(svDialogs)
 
 
 ##Step 2: Global variables
@@ -36,9 +38,9 @@ library(gargle)
 #after this step copy and paste into the R profile script and save
 #now stored so don't have to authenticate
 
-Date=(floor_date(Sys.Date() - months(1), "month"))
+Date=(floor_date(Sys.Date() - months(2), "month"))
 
-reporting_period=floor_date(today()-months(0),"month")
+reporting_period=floor_date(today()-months(1),"month")
 
 #'[Load Data from Individual Partners google sheets for Level one review 
 #'
@@ -110,6 +112,27 @@ Missing_data_FHI360<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date 
 #'[ANOVA Feedback Tracker]
 
 Missing_data_ANOVA<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70310) %>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+######Checking for Zero reproting
+flag_zeros<-Append1 %>%  filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70310) %>% mutate(zero_reporting=case_when(age=="15-19" & value==0~"Yes",
+                                                                                                                                            age=="20-24"& value==0~"Yes",
+                                                                                                                                            age=="25-29"& value==0~"Yes",
+                                                                                                                                            age=="30-34" &value==0~"Yes",
+                                                                                                                                            age=="35-39" & value==0~"Yes",
+                                                                                                                                            age=="40-44" & value==0~"Yes",
+                                                                                                                                            age=="50+" &  value==0~"Yes",TRUE~"No"))
+
+flag<-flag_zeros$zero_reporting== "Yes"
+
+if (flag==TRUE) {    
+  
+  dlg_message(c("Please check for zero reporting before clearing the data"))
+  
+   ""
+}
+
+
+
+
 
 
 #write_csv(AGYW_DREAMS,"AGYW_PREV_Final.csv")
@@ -131,5 +154,10 @@ filename<-paste(Sys.Date(), "RawData", ".xlsx")
 
 openxlsx::write.xlsx(RawData, file.path(here("Dataout"),filename),sheetName="RawData")
 
+#Gen CIRG custom list
+
+CIGR_Lst<-RawData %>% mutate(reportingperiod=perio,	orgunit	orgunituid	mech_code	partner	operatingunit	psnu	indicator	sex	age	otherdisaggregate	population	numdenom	value)
 
 
+
+                             
