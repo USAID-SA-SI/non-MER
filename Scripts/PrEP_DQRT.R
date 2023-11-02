@@ -31,7 +31,7 @@ library(glamr)
 library(gargle)
 library(tcltk2)
 library(svDialogs)
-
+library(data.table)
 
 ##Step 2: Global variables
 
@@ -42,10 +42,14 @@ Date=(floor_date(Sys.Date() - months(2), "month"))
 
 reporting_period=floor_date(today()-months(1),"month")
 
-#'[Load Data from Individual Partners google sheets for Level one review 
+#'[Load Data from Individual Partners google sheets for Level one review
 #'
-MatCH<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Dfjvf-K7O0q6i6vHQkzNCFfoSkbtMtB7NvT703GvCSY/edit#gid=1044282265k'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
+MatCH_80902<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Dfjvf-K7O0q6i6vHQkzNCFfoSkbtMtB7NvT703GvCSY/edit#gid=1044282265k'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
   indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
+
+MatCH_87576<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Dfjvf-K7O0q6i6vHQkzNCFfoSkbtMtB7NvT703GvCSY/edit#gid=1044282265k'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
+  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2023':'12/31/2024')
+
 
 
 RTC<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Hc99weOc2CjGCKs3pruJ5_YetSwn02zZp6AhCjj6N1g/edit#gid=2092521029'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
@@ -55,8 +59,15 @@ BRCH<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1vjfCZ2QIj
   indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
 
 
-ANOVA<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1hJUAaSludW5SbXeng51oc2tbf6pCYHyp2QvxLUq5tYQ/edit#gid=1044282265'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
+ANOVA_70310<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1hJUAaSludW5SbXeng51oc2tbf6pCYHyp2QvxLUq5tYQ/edit#gid=1044282265'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
   indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
+
+ANOVA_87577 <-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1VfT-U-evaHeREufdMlvx58sCOGuD4GU4U-ZZw7bY4KM/edit#gid=2092521029'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
+  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2023':'12/31/2024')
+
+ANOVA<rbind(ANOVA_70310,ANOVA_87577)
+ANOVA<-rbindlist(list(ANOVA_70310, ANOVA_87577), fill = TRUE)
+
 
 
 WRHI_70306<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1CxN09HcB711uHgRAaO8HfPOgX86329f4RRKiKMiavr8/edit#gid=1044282265'), sheet = "4. Reporting tab") %>% rename(`5/31/2023`=`05/31/2023`)
@@ -68,14 +79,14 @@ WRHI_80007<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1oOV
   indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
 
 
-FHI360<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1H1hv4EK8RYTrA1OOn38AZtLeJ0ovKbC_mNSAGgJiJ0c/edit#gid=1044282265'), sheet = "4. Reporting tab") 
+FHI360<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1H1hv4EK8RYTrA1OOn38AZtLeJ0ovKbC_mNSAGgJiJ0c/edit#gid=1044282265'), sheet = "4. Reporting tab")
 
 
 
 All_PrEP<-bind_rows(WRHI_70301,WRHI_70306,WRHI_80007,FHI360,ANOVA,BRCH,RTC,MatCH)
 ####FLAGGING MISSING DATRA FOR CORRECTION
 
-Append1<-gather(All_PrEP,period,value,`10/31/2021`:`12/31/2023`) %>% mutate(period=mdy(period)) %>% mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>% mutate(value=abs(value),missing=if_else(  is.na(value),"Yes","No"))%>% 
+Append1<-gather(All_PrEP,period,value,`10/31/2021`:`12/31/2023`) %>% mutate(period=mdy(period)) %>% mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>% mutate(value=abs(value),missing=if_else(  is.na(value),"Yes","No"))%>%
   group_by( indicator ,partner, mechanismid,country, snu1,snu1id,psnu,psnuuid , kptype,age,sex,period ) %>% summarise(value=sum(value)) %>% mutate(missing=if_else(is.na(value),"Yes","No")) %>%  mutate(flag =(is.na(value)& lag(value))>0)
 
 
@@ -111,9 +122,9 @@ Missing_data_FHI360<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date 
 
 #'[ANOVA Feedback Tracker]
 
-Missing_data_ANOVA<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70310) %>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+Missing_data_ANOVA<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==87577) %>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
 ######Checking for Zero reproting
-flag_zeros<-Append1 %>%  filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70310) %>% mutate(zero_reporting=case_when(age=="15-19" & value==0~"Yes",
+flag_zeros<-Append1 %>%  filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==87577) %>% mutate(zero_reporting=case_when(age=="15-19" & value==0~"Yes",
                                                                                                                                             age=="20-24"& value==0~"Yes",
                                                                                                                                             age=="25-29"& value==0~"Yes",
                                                                                                                                             age=="30-34" &value==0~"Yes",
@@ -123,10 +134,10 @@ flag_zeros<-Append1 %>%  filter(period>=Date & period<=reporting_period) %>% fil
 
 flag<-flag_zeros$zero_reporting== "Yes"
 
-if (flag==TRUE) {    
-  
+if (flag==TRUE) {
+
   dlg_message(c("Please check for zero reporting before clearing the data"))
-  
+
    ""
 }
 
@@ -160,4 +171,3 @@ CIGR_Lst<-RawData %>% mutate(reportingperiod=perio,	orgunit	orgunituid	mech_code
 
 
 
-                             
