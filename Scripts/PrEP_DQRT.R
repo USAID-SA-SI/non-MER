@@ -316,7 +316,7 @@ ANOVA_70310_checks<-All_PrEP_wider %>%
   filter(mechanismid==70310) %>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
 
 wb <- createWorkbook()
-write.xlsx(ANOVA_87577_checks,"Dataout/PrEP_DQRT_Feedback_ANOVA_70310.xlsx",  sheetName="Validations",append=TRUE)
+write.xlsx(ANOVA_70310_checks,"Dataout/PrEP_DQRT_Feedback_ANOVA_70310.xlsx",  sheetName="Validations",append=TRUE)
 wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_ANOVA_70310.xlsx")
 
 addWorksheet(wb,"Data_dictionary")
