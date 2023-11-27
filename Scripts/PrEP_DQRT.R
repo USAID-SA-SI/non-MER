@@ -115,7 +115,12 @@ EngageMensHealth<- read_sheet(as_sheets_id('https://docs.google.com/spreadsheets
   select( indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate, '10/31/2023':'12/31/2024') 
 
 
-All_PrEP<-bind_rows(WRHI_70301,WRHI_70306,WRHI_80007,FHI360,ANOVA_70310,MatCH, ANOVA_87577,BRCH,RTC,EngageMensHealth)
+All_PrEP<-bind_rows(WRHI_70301,WRHI_70306,WRHI_80007,FHI360,ANOVA_70310,MatCH, ANOVA_87577,BRCH,RTC,EngageMensHealth) 
+
+#'[for DAU PrEP dashboard Raw file
+All_PrEP_longer<- All_PrEP %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% mutate(period=anydate(period)) %>% 
+  mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>%
+  group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>% summarize_at(vars(value),sum,na.rm=TRUE)
 
 #'[FLAGGING INCONSISTENCIES IN DATA FOR CORRECTION 
 
@@ -128,7 +133,7 @@ All_PrEP<-bind_rows(WRHI_70301,WRHI_70306,WRHI_80007,FHI360,ANOVA_70310,MatCH, A
 
 All_PrEP_longer<- All_PrEP %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% mutate(period=anydate(period)) %>%  group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>%
 summarize_at(vars(value),sum,na.rm=TRUE)%>%mutate(check1=if_else(sex=="Female" & disaggregate!="" & is.na(value)  ,"clean record","✔")) 
-  
+
 All_PrEP_wider<- All_PrEP_longer %>% pivot_wider(names_from = indicator,values_from = value) %>%
 filter(period>floor_date((ymd(today()-months(1))),'month') & period<=floor_date(ymd(today()), 'month')-days(1)) %>% 
 mutate(check2=if_else(sex=="Male" & disaggregate!=""  ,"Clean record","✔")) %>% 
@@ -152,11 +157,12 @@ Check_description = c(
   
 #'[for DAU PrEP dashboard Raw file
 
-Append1<-gather(All_PrEP,period,value,`10/31/2021` : `12/31/2024`) %>% mutate(period=mdy(period)) %>%
-  mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>%
- mutate(value=(value))%>%  group_by( indicator ,partner, mechanismid,country, snu1,snu1id,psnu,psnuuid , kptype,age,sex,disaggregate, period ) %>%
-  summarise(value=sum(value)) 
+# Append1<-gather(All_PrEP,period,value,`10/31/2021` : `12/31/2024`) %>% mutate(period=mdy(period)) %>%
+#   mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>%
+#  mutate(value=(value))%>%  group_by( indicator ,partner, mechanismid,country, snu1,snu1id,psnu,psnuuid , kptype,age,sex,disaggregate, period ) %>%
+#   summarise(value=sum(value)) 
   
+
 
 
 #'[WRHI_70301 Feedback Tracker]
@@ -325,7 +331,8 @@ rm( ANOVA_70310_checks,ANOVA_87577_checks,  BRCH_checks,  EngageMensHealth_check
 #write_csv(AGYW_DREAMS,"AGYW_PREV_Final.csv")
 
 
-RawData<-Append1 %>% select(indicator,	partner,	mechanismid	,country	,snu1	,snu1id,disaggregate,	psnu,	psnuuid,	age,	sex	,period,	kptype,	value)
+RawData<-All_PrEP_longer %>% select(indicator,	partner,	mechanismid	,country	,snu1	,snu1id,disaggregate,	psnu,	psnuuid,	age,	sex	,period,	kptype,	value)
+
 
 filename<-paste(Sys.Date(), "RawData", ".xlsx")
 
