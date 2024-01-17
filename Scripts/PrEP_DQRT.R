@@ -2,8 +2,8 @@
 # Title: Level Two process
 # Author: C. Trapence
 # Date:2023-07-11
-# Updated:2024:01:16
-# Updated by Rosaline & Clement
+# Updated:2024:01:19
+# Updated by Rosaline
 # Load Required libraries
 # Red text symbolizes comments
 
@@ -118,7 +118,7 @@ EngageMensHealth<- read_sheet(as_sheets_id('https://docs.google.com/spreadsheets
 All_PrEP<-bind_rows(WRHI_70301,WRHI_70306,WRHI_80007,FHI360,ANOVA_70310,MatCH, ANOVA_87577,BRCH,RTC,EngageMensHealth) 
 
 #FY24 ONLY
-All_PrEPv2<-bind_rows(WRHI_70301_b,WRHI_70301_b,WRHI_80007_b,FHI360,ANOVA_70310_b,ANOVA_87577,MatCH_81902,MatCH_87576,BRCH_70287_b,RTC_70290_b,EngageMensHealth) 
+All_PrEPv2<-bind_rows(WRHI_70306,WRHI_70301_b,WRHI_80007_b,FHI360,ANOVA_70310_b,ANOVA_87577,MatCH_81902,MatCH_87576,BRCH_70287_b,RTC_70290_b,EngageMensHealth) 
 
 
 #Historical Data
@@ -130,7 +130,7 @@ All_PrEP_longer<- All_PrEP %>% pivot_longer(13:51, names_to= "period", values_to
 #FY24 Data Only
 All_PrEP_longerv2<- All_PrEPv2 %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% 
   mutate(period=anydate(period)) %>%  group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>%
-  summarize(value=sum(value)) %>% mutate(level1=if_else(!is.na(value),"Complete","Missing")) %>% 
+  summarize(value=sum(value)) %>% mutate(missing=if_else(!is.na(value),"No","Yes")) %>% 
   mutate(check1=if_else(sex=="Female" & disaggregate!="" & !is.na(value)  ,"✔","NA")) 
 
 
@@ -146,7 +146,7 @@ All_PrEP_longerv2<- All_PrEPv2 %>% pivot_longer(13:51, names_to= "period", value
 #Historical Data
 All_PrEP_longer<- All_PrEP %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% 
 mutate(period=anydate(period)) %>%  group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>%
-summarize(value=sum(value)) %>% mutate(level1=if_else(!is.na(value),"Complete","Missing")) %>% 
+summarize(value=sum(value)) %>% mutate(missing=if_else(!is.na(value),"No","Yes")) %>% 
 mutate(check1=if_else(sex=="Female" & disaggregate!="" & !is.na(value)  ,"✔","NA")) 
 
 #FY24 Data only
@@ -158,7 +158,7 @@ All_PrEP_widerv2<- All_PrEP_longerv2 %>% pivot_wider(names_from = indicator,valu
   mutate(check4=if_else(PrEP_NEW>PrEP_SCREEN ,"Clean record","✔")) %>% 
   mutate(check5=if_else(PrEP_NEW>PrEP_ELIGIBLE ,"Clean record","✔")) %>% 
   mutate(check6=if_else(PrEP_NEW>(PrEP_TST_NEG+PrEP_TST_POS) ,"Clean record","✔")) %>%   
-  select(partner:period,level1,check1,check2,check3,check4,check5,check6,PrEP_ELIGIBLE:PrEP_TST_POS)
+  select(partner:period,missing,check1,check2,check3,check4,check5,check6,PrEP_ELIGIBLE:PrEP_TST_POS)
 
 #Historical Data only
 
@@ -170,7 +170,7 @@ mutate(check3=if_else(PrEP_ELIGIBLE>PrEP_SCREEN ,"Clean record","✔")) %>%
 mutate(check4=if_else(PrEP_NEW>PrEP_SCREEN ,"Clean record","✔")) %>% 
 mutate(check5=if_else(PrEP_NEW>PrEP_ELIGIBLE ,"Clean record","✔")) %>% 
 mutate(check6=if_else(PrEP_NEW>(PrEP_TST_NEG+PrEP_TST_POS) ,"Clean record","✔")) %>%   
-select(partner:period,level1,check1,check2,check3,check4,check5,check6,PrEP_ELIGIBLE:PrEP_TST_POS)
+select(partner:period,missing,check1,check2,check3,check4,check5,check6,PrEP_ELIGIBLE:PrEP_TST_POS)
 
 Data_dictionary <- data.frame(
 Check = c("Check1", "Check2", "Check3", "Check4","Check5", "Check6"),
@@ -215,12 +215,12 @@ saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_WRHI_70301.xlsx",overwrite = T)
 
 #'[WRHI_70306 Feedback Tracker]
 
-WRHI_70306_checks<-All_PrEP_wider %>% filter(mechanismid==70306) %>% 
+WRHI_70306_checks<-All_PrEP_widerv2 %>% filter(mechanismid==70306) %>% 
   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
 
 wb <- createWorkbook()
 
-write.xlsx(WRHI_70301_checks,"Dataout/PrEP_DQRT_Feedback_WRHI_70306.xlsx",  sheetName="Validations",append=TRUE)
+write.xlsx(WRHI_70306_checks,"Dataout/PrEP_DQRT_Feedback_WRHI_70306.xlsx",  sheetName="Validations",append=TRUE)
 
 wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_WRHI_70306.xlsx")
 
@@ -232,7 +232,7 @@ saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_WRHI_70306.xlsx",overwrite = T)
 
 #'[WRHI_80007 Feedback Tracker]
 
-WRHI_80007_checks<-All_PrEP_wider %>%  
+WRHI_80007_checks<-All_PrEP_widerv2 %>%  
   filter(mechanismid==80007)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
 wb <- createWorkbook()
 
@@ -249,7 +249,7 @@ saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_WRHI_80007.xlsx",overwrite = T)
 
 
 #'[RTC Feedback Tracker]
-RTC_checks<-All_PrEP_wider %>% 
+RTC_checks<-All_PrEP_widerv2 %>% 
   filter(mechanismid==70290) %>% 
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
 
