@@ -1,8 +1,9 @@
+
 # Title: Level Two process
 # Author: C. Trapence
-# Purpose: Automating the process of Reporting AGYW_PREV for Inter-agency
 # Date:2023-07-11
-# Updated:2023:07:12
+# Updated:2024:01:19
+# Updated by Rosaline
 # Load Required libraries
 # Red text symbolizes comments
 
@@ -10,164 +11,361 @@
 #  source files used in the code include:                                                                            #
 #              1) Google Sheets                                                                                      #
 
-setwd("C:/Users/ctrapence/Documents")
 
-library(tidyverse)
-library(here)
-library(readxl)
-library(lubridate)
-library(readr)
-library(excel.link)
-library(openxlsx)
-library(data.table)
-library(sqldf)
-library(stringr)
-library(lubridate)
-library(tidyr)
-library(anytime)
-library(googledrive)
-library(googlesheets4)
-library(glamr)
-library(gargle)
-library(tcltk2)
-library(svDialogs)
-library(data.table)
+if(!require(pacman)) install.packages("pacman")
+pacman::p_load(tidyverse, janitor, here, gargle,glamr,anytime,patchwork,maditr, googledrive,googlesheets4,openxlsx,lubridate,janitor,readr, esquisse, flextable,stringr,sqldf)
 
-##Step 2: Global variables
+load_secrets()
 
-#after this step copy and paste into the R profile script and save
-#now stored so don't have to authenticate
 
-Date=(floor_date(Sys.Date() - months(2), "month"))
+#'[RTC]
+  #Reading historical data
+RTC_70290_a<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Hc99weOc2CjGCKs3pruJ5_YetSwn02zZp6AhCjj6N1g/edit#gid=2092521029'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% mutate(disaggregate = "") %>% select(
+  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,'10/31/2021':'12/31/2024')
 
-reporting_period=floor_date(today()-months(1),"month")
+#Reading data for current reporting FY24  
+RTC_70290_b<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Hc99weOc2CjGCKs3pruJ5_YetSwn02zZp6AhCjj6N1g/edit#gid=2109560495'), sheet = "FY24_Reporting tab") %>% mutate(kptype="")%>%
+   mutate(disaggregate = if_else(disaggregate== "N/A", "",disaggregate))  %>%mutate(disaggregate=if_else(is.na(disaggregate),"",disaggregate)) %>% 
 
-#'[Load Data from Individual Partners google sheets for Level one review
+  select(indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,'10/31/2023':'12/31/2024') 
+
+ 
+#Consolidating RTC's historical and current data 
+RTC<- bind_rows(RTC_70290_a, RTC_70290_b)
+
+#'[MatCH]
+#'# MatCH only starts reporting on mech code 87576 from Jan 2024 so no data available for Oct-Dec 2023
+MatCH_81902<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Dfjvf-K7O0q6i6vHQkzNCFfoSkbtMtB7NvT703GvCSY/edit#gid=1044282265k'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
+  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
+
+MatCH_87576<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1O_Cx4yAvtU5IlZjeRHtBTqTxWur2x-bGXvVPUjnXbhE/edit#gid=2092521029'), sheet = "FY24_Reporting tab") %>% mutate(kptype="")%>% select(
+  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'1/31/2024':'12/31/2024')
+
+MatCH<- bind_rows(MatCH_81902, MatCH_87576)
+
+#'[Broadreach]
+ #Reading historical data
+BRCH_70287_a<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1vjfCZ2QIjKS2ASfsWq4jHGNot38W_FAiaslOp4YR0sE/edit#gid=1044282265'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% mutate(disaggregate = "")%>% 
+  select( indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,'10/31/2021':'9/30/2023') 
+ #Reading data for current reporting FY224
+BRCH_70287_b<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1vjfCZ2QIjKS2ASfsWq4jHGNot38W_FAiaslOp4YR0sE/edit#gid=1044282265'), sheet = "FY24_Reporting tab") %>% mutate(kptype="")%>%mutate(disaggregate=if_else(is.na(disaggregate),"",disaggregate)) %>%
+  select(indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,disaggregate,sex,'10/31/2023':'12/31/2024')
+ 
+#Consolidating BRCH's historical and current data for current reporting FY24
+BRCH<-bind_rows(BRCH_70287_a, BRCH_70287_b)
+
+BRCH_longer<- BRCH %>% pivot_longer(13:51, names_to= "period", values_to = "value")
+
+#'[ANOVA]
+ #Reading historical data                                     
+ANOVA_70310_a<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1hJUAaSludW5SbXeng51oc2tbf6pCYHyp2QvxLUq5tYQ/edit#gid=2092521029'), sheet = "4. Reporting tab") %>%
+  mutate(kptype="") %>%   mutate(disaggregate = "")%>% 
+  select(indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,disaggregate, sex,'10/31/2021':'9/30/2023')
+ #Reading data for current reporting FY24 
+ANOVA_70310_b<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1hJUAaSludW5SbXeng51oc2tbf6pCYHyp2QvxLUq5tYQ/edit#gid=435605647'), sheet = "FY24_Reporting tab") %>% mutate(kptype="")%>% 
+  mutate(disaggregate = if_else(disaggregate== "N/A", "",disaggregate))  %>%mutate(disaggregate=if_else(is.na(disaggregate),"",disaggregate)) %>% 
+  select( indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,disaggregate, sex,'10/31/2023':'12/31/2024')
+ 
+#Reading data for new mechanism(87577) for current reporting FY24
+ANOVA_87577 <-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1VfT-U-evaHeREufdMlvx58sCOGuD4GU4U-ZZw7bY4KM/edit#gid=2092521029'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>%
+  select(indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,disaggregate, sex,'10/31/2023':'12/31/2024') %>% mutate(disaggregate = if_else(disaggregate== "N/A", "",disaggregate))  %>%mutate(disaggregate=if_else(is.na(disaggregate),"",disaggregate))
+
+ #Consolidating ANOVA's historical and current data for current reporting FY24
+ANOVA_70310<-bind_rows(ANOVA_70310_a, ANOVA_70310_b)
+
+
+#'[WRHI]
+#Reading Key population historical data and FY24 data for mech code 70306
+WRHI_70306<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1CxN09HcB711uHgRAaO8HfPOgX86329f4RRKiKMiavr8/edit#gid=2092521029'), sheet = "4. Reporting tab") %>% mutate(disaggregate = "")%>% 
+  select(indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,'10/31/2021':'12/31/2024')
+
+ #Reading 70301 APACE historical data   
+WRHI_70301_a<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1xLat8u9GZLgtpwRJWpe4WwAZ1eoulXXUtgxm7r3dsqo/edit#gid=20925210295'), sheet = "4. Reporting tab")  %>% mutate(kptype="")%>% mutate(disaggregate = "")%>% 
+  select( indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,'10/31/2021':'12/31/2024')
+#Reading 70301 APACE data for current reporting FY24
+WRHI_70301_b<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1xLat8u9GZLgtpwRJWpe4WwAZ1eoulXXUtgxm7r3dsqo/edit#gid=20925210295'), sheet = "FY24_Reporting tab")  %>% mutate(kptype="")%>% 
+  mutate(disaggregate=if_else(is.na(disaggregate),"",disaggregate)) %>% 
+  select( indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,'10/31/2023':'12/31/2024')
+
+#Consolidating WRHI's historical and current data for current reporting FY24 for mech code 70301
+WRHI_70301<- bind_rows(WRHI_70301_a, WRHI_70301_b)
+
+#Reading 80007 historical data                                   
+WRHI_80007_a<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1oOVQ2swAuXUPmBrI0UOo8mjaTEB87IYC2QSKZ36hPDA/edit#gid=1105257127'), sheet = "4. Reporting tab") %>% mutate(kptype="") %>% mutate(disaggregate = "")%>% 
+  select( indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,disaggregate,sex,'10/31/2021':'12/31/2024')
+ 
+#Reading 80007 data for current reporting FY24  
+WRHI_80007_b<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1oOVQ2swAuXUPmBrI0UOo8mjaTEB87IYC2QSKZ36hPDA/edit#gid=1105257127'), sheet = "FY24_Reporting tab") %>% mutate(kptype="") %>%  
+  mutate(disaggregate=if_else(is.na(disaggregate),"",disaggregate)) %>% 
+  select( indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,disaggregate,sex,'10/31/2023':'12/31/2024')
+
+
+#Consolidating WRHI's historical and current data for current reporting FY24 for mech code 80007
+WRHI_80007<- bind_rows(WRHI_80007_a, WRHI_80007_b)
+
+#'[FHI 360]
+# Reading historic and current data for FHI 360
+FHI360<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1H1hv4EK8RYTrA1OOn38AZtLeJ0ovKbC_mNSAGgJiJ0c/edit#gid=1044282265'), sheet = "4. Reporting tab")%>% mutate(disaggregate = "")%>% 
+  select(indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,disaggregate,sex,'10/31/2021':'12/31/2024')
+
+
+#'[Engage Men's Health]
+#Added new partner
+EngageMensHealth<- read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1xF-nuS6WR19RgJ_dFjfoOjdC_b3zsC6lSN--JCiXHD8/edit#gid=2092521029'),sheet = "4. Reporting tab") %>% mutate(kptype="")%>% mutate(disaggregate = "")%>% 
+  select( indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate, '10/31/2023':'12/31/2024') 
+
+#Historical Data
+All_PrEP<-bind_rows(WRHI_70301,WRHI_70306,WRHI_80007,FHI360,ANOVA_70310,MatCH, ANOVA_87577,BRCH,RTC,EngageMensHealth) 
+
+#FY24 ONLY
+All_PrEPv2<-bind_rows(WRHI_70306,WRHI_70301_b,WRHI_80007_b,FHI360,ANOVA_70310_b,ANOVA_87577,MatCH_81902,MatCH_87576,BRCH_70287_b,RTC_70290_b,EngageMensHealth) 
+
+
+#Historical Data
+#'[for DAU PrEP dashboard Raw file
+All_PrEP_longer<- All_PrEP %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% mutate(period=anydate(period)) %>% 
+  mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>%
+  group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>% summarize_at(vars(value),sum,na.rm=TRUE)
+
+#FY24 Data Only
+All_PrEP_longerv2<- All_PrEPv2 %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% 
+  mutate(period=anydate(period)) %>%  group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>%
+  summarize(value=sum(value)) %>% mutate(missing=if_else(!is.na(value),"No","Yes")) %>% 
+  mutate(check1=if_else(sex=="Female" & disaggregate!="" & !is.na(value)  ,"✔","NA")) 
+
+
+#'[FLAGGING INCONSISTENCIES IN DATA FOR CORRECTION 
+
+#'[Check1: "Check for females with  specified pregnancy/breastfeeding disaggregate but with missing values.",
+#'[Check2: "Check for males with specified pregnancy/breastfeeding disaggregate.",
+#'[Check3: "Verify if reported PrEP eligibility exceeds screenings.",
+#'[Check4: "Confirm if reported new PrEP enrollments exceed screenings.",
+#'[Check5: "Assess if new PrEP enrollments surpass eligible individuals.",
+#'[Check6: "Validate if new PrEP enrollments surpass those with confirmed HIV test results."
 #'
-MatCH_80902<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Dfjvf-K7O0q6i6vHQkzNCFfoSkbtMtB7NvT703GvCSY/edit#gid=1044282265k'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
-  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
+#Historical Data
+All_PrEP_longer<- All_PrEP %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% 
+mutate(period=anydate(period)) %>%  group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>%
+summarize(value=sum(value)) %>% mutate(missing=if_else(!is.na(value),"No","Yes")) %>% 
+mutate(check1=if_else(sex=="Female" & disaggregate!="" & !is.na(value)  ,"✔","NA")) 
 
-MatCH_87576<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Dfjvf-K7O0q6i6vHQkzNCFfoSkbtMtB7NvT703GvCSY/edit#gid=1044282265k'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
-  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2023':'12/31/2024')
+#FY24 Data only
+All_PrEP_widerv2<- All_PrEP_longerv2 %>% pivot_wider(names_from = indicator,values_from = value) %>%
+  filter(period>floor_date((ymd(today()-months(2))),'month') & period<=floor_date(ymd(today()), 'month')-days(1)) %>%
+  mutate(check2=if_else(sex=="Male" & disaggregate!="" & any(!is.na(c( PrEP_ELIGIBLE, PrEP_NEW , PrEP_RETURN_1MONTH,PrEP_RETURN_4MONTHS,
+                                                                       PrEP_RETURN_7MONTHS,PrEP_SCREEN,PrEP_TST_NEG,PrEP_TST_POS))) ,"Clean record","NA")) %>% 
+  mutate(check3=if_else(PrEP_ELIGIBLE>PrEP_SCREEN ,"Clean record","✔")) %>% 
+  mutate(check4=if_else(PrEP_NEW>PrEP_SCREEN ,"Clean record","✔")) %>% 
+  mutate(check5=if_else(PrEP_NEW>PrEP_ELIGIBLE ,"Clean record","✔")) %>% 
+  mutate(check6=if_else(PrEP_NEW>(PrEP_TST_NEG+PrEP_TST_POS) ,"Clean record","✔")) %>%   
+  select(partner:period,missing,check1,check2,check3,check4,check5,check6,PrEP_ELIGIBLE:PrEP_TST_POS)
 
+#Historical Data only
 
+All_PrEP_wider<- All_PrEP_longer %>% pivot_wider(names_from = indicator,values_from = value) %>%
+filter(period>floor_date((ymd(today()-months(2))),'month') & period<=floor_date(ymd(today()), 'month')-days(1)) %>%
+mutate(check2=if_else(sex=="Male" & disaggregate!="" & any(!is.na(c( PrEP_ELIGIBLE, PrEP_NEW , PrEP_RETURN_1MONTH,PrEP_RETURN_4MONTHS,
+PrEP_RETURN_7MONTHS,PrEP_SCREEN,PrEP_TST_NEG,PrEP_TST_POS))) ,"Clean record","NA")) %>% 
+mutate(check3=if_else(PrEP_ELIGIBLE>PrEP_SCREEN ,"Clean record","✔")) %>% 
+mutate(check4=if_else(PrEP_NEW>PrEP_SCREEN ,"Clean record","✔")) %>% 
+mutate(check5=if_else(PrEP_NEW>PrEP_ELIGIBLE ,"Clean record","✔")) %>% 
+mutate(check6=if_else(PrEP_NEW>(PrEP_TST_NEG+PrEP_TST_POS) ,"Clean record","✔")) %>%   
+select(partner:period,missing,check1,check2,check3,check4,check5,check6,PrEP_ELIGIBLE:PrEP_TST_POS)
 
-RTC<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Hc99weOc2CjGCKs3pruJ5_YetSwn02zZp6AhCjj6N1g/edit#gid=2092521029'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
-  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
+Data_dictionary <- data.frame(
+Check = c("Check1", "Check2", "Check3", "Check4","Check5", "Check6"),
+Check_description = c(
+  "Check for females without specified pregnancy/breastfeeding disaggregate but with values.",
+  "Check for males with specified pregnancy/breastfeeding disaggregate.",
+  "Verify if reported PrEP eligibility exceeds screenings.",
+  "Confirm if reported new PrEP enrollments exceed screenings.",
+  "Assess if new PrEP enrollments surpass eligible individuals.",
+  "Validate if new PrEP enrollments surpass those with confirmed HIV test results."
+))
+  
+  
+#'[for DAU PrEP dashboard Raw file
 
-BRCH<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1vjfCZ2QIjKS2ASfsWq4jHGNot38W_FAiaslOp4YR0sE/edit#gid=1044282265'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
-  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
+# Append1<-gather(All_PrEP,period,value,`10/31/2021` : `12/31/2024`) %>% mutate(period=mdy(period)) %>%
+#   mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>%
+#  mutate(value=(value))%>%  group_by( indicator ,partner, mechanismid,country, snu1,snu1id,psnu,psnuuid , kptype,age,sex,disaggregate, period ) %>%
+#   summarise(value=sum(value)) 
+  
 
-
-ANOVA_70310<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1hJUAaSludW5SbXeng51oc2tbf6pCYHyp2QvxLUq5tYQ/edit#gid=1044282265'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
-  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
-
-ANOVA_87577 <-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1VfT-U-evaHeREufdMlvx58sCOGuD4GU4U-ZZw7bY4KM/edit#gid=2092521029'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
-  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2023':'12/31/2024')
-
-ANOVA<rbind(ANOVA_70310,ANOVA_87577)
-ANOVA<-rbindlist(list(ANOVA_70310, ANOVA_87577), fill = TRUE)
-
-
-
-WRHI_70306<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1CxN09HcB711uHgRAaO8HfPOgX86329f4RRKiKMiavr8/edit#gid=1044282265'), sheet = "4. Reporting tab") %>% rename(`5/31/2023`=`05/31/2023`)
-
-WRHI_70301<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1xLat8u9GZLgtpwRJWpe4WwAZ1eoulXXUtgxm7r3dsqo/edit#gid=1044282265'), sheet = "4. Reporting tab")  %>% mutate(kptype="")%>% select(
-  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
-
-WRHI_80007<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1oOVQ2swAuXUPmBrI0UOo8mjaTEB87IYC2QSKZ36hPDA/edit#gid=1044282265'), sheet = "4. Reporting tab") %>% mutate(kptype="") %>% select(
-  indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
-
-
-FHI360<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1H1hv4EK8RYTrA1OOn38AZtLeJ0ovKbC_mNSAGgJiJ0c/edit#gid=1044282265'), sheet = "4. Reporting tab")
-
-
-
-All_PrEP<-bind_rows(WRHI_70301,WRHI_70306,WRHI_80007,FHI360,ANOVA,BRCH,RTC,MatCH)
-####FLAGGING MISSING DATRA FOR CORRECTION
-
-Append1<-gather(All_PrEP,period,value,`10/31/2021`:`12/31/2023`) %>% mutate(period=mdy(period)) %>% mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>% mutate(value=abs(value),missing=if_else(  is.na(value),"Yes","No"))%>%
-  group_by( indicator ,partner, mechanismid,country, snu1,snu1id,psnu,psnuuid , kptype,age,sex,period ) %>% summarise(value=sum(value)) %>% mutate(missing=if_else(is.na(value),"Yes","No")) %>%  mutate(flag =(is.na(value)& lag(value))>0)
 
 
 #'[WRHI_70301 Feedback Tracker]
 
-Missing_data_WRHI_70301<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70301)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+WRHI_70301_checks<-All_PrEP_widerv2 %>% filter(mechanismid==70301)%>% 
+  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
+# Save workbook to working directory
+
+#Creating workbook with separate worksheets to document the different checks 
+wb <- createWorkbook()
+write.xlsx(WRHI_70301_checks,"Dataout/PrEP_DQRT_Feedback_WRHI_70301.xlsx",  sheetName="Validations",append=TRUE)
+
+wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_WRHI_70301.xlsx")
+
+addWorksheet(wb,"Data_dictionary")
+writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
+
+saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_WRHI_70301.xlsx",overwrite = T)
 
 
 #'[WRHI_70306 Feedback Tracker]
 
-Missing_data_WRHI_70306<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70306)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+WRHI_70306_checks<-All_PrEP_widerv2 %>% filter(mechanismid==70306) %>% 
+  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
+wb <- createWorkbook()
+
+write.xlsx(WRHI_70306_checks,"Dataout/PrEP_DQRT_Feedback_WRHI_70306.xlsx",  sheetName="Validations",append=TRUE)
+
+wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_WRHI_70306.xlsx")
+
+addWorksheet(wb,"Data_dictionary")
+writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
+
+saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_WRHI_70306.xlsx",overwrite = T)
 
 
 #'[WRHI_80007 Feedback Tracker]
 
-Missing_data_WRHI_80007<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==80007)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+WRHI_80007_checks<-All_PrEP_widerv2 %>%  
+  filter(mechanismid==80007)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+wb <- createWorkbook()
+
+write.xlsx(WRHI_80007_checks,"Dataout/PrEP_DQRT_Feedback_WRHI_80007.xlsx",  sheetName="Validations",append=TRUE)
+
+wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_WRHI_80007.xlsx")
+
+addWorksheet(wb,"Data_dictionary")
+writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
+
+saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_WRHI_80007.xlsx",overwrite = T)
+
+# 
+
 
 #'[RTC Feedback Tracker]
+RTC_checks<-All_PrEP_widerv2 %>% 
+  filter(mechanismid==70290) %>% 
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
 
-Missing_data_RTC<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70290)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+wb <- createWorkbook()
+write.xlsx(RTC_checks,"Dataout/PrEP_DQRT_Feedback_RTC.xlsx",  sheetName="Validations",append=TRUE)
+
+wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_RTC.xlsx")
+
+addWorksheet(wb,"Data_dictionary")
+writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
+
+saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_RTC.xlsx",overwrite = T)
 
 #'[BRCH Feedback Tracker]
 
-Missing_data_BRCH<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==70287)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+BRCH_checks<-All_PrEP_widerv2 %>%  
+  filter(mechanismid==70287)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+wb <- createWorkbook()
+
+write.xlsx(BRCH_checks,"Dataout/PrEP_DQRT_Feedback_BRCH.xlsx",  sheetName="Validations",append=TRUE)
+
+wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_BRCH.xlsx")
+
+addWorksheet(wb,"Data_dictionary")
+writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
+
+saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_BRCH.xlsx",overwrite = T)
 
 
 #'[MaTCH Feedback Tracker]
-Missing_data_MaTCH<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==81902)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+MaTCH_81902_checks<-All_PrEP_widerv2 %>% 
+  filter(mechanismid==81902)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+
+wb <- createWorkbook()
+
+write.xlsx(MaTCH_81902_checks,"Dataout/PrEP_DQRT_Feedback_MaTCH.xlsx",  sheetName="Validations",append=TRUE)
+wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_MaTCH.xlsx")
+
+addWorksheet(wb,"Data_dictionary")
+writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
+
+saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_MaTCH.xlsx",overwrite = T)
+
 
 #'[FHI360 Feedback Tracker]
-Missing_data_FHI360<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==82199)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+#''#Filter applied to exclude Eastern Cape and Gauteng where partner is no longer reporting
+FHI360_checks<-All_PrEP_widerv2 %>%
+  filter(mechanismid==82199)%>% 
+  filter(sex== "Male") %>% filter(snu1== "wc Western Cape Province") %>%mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+  
+wb <- createWorkbook()
 
+write.xlsx(FHI360_checks,"Dataout/PrEP_DQRT_Feedback_FHI360.xlsx",  sheetName="Validations",append=TRUE)
+wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_FHI360.xlsx")
+
+addWorksheet(wb,"Data_dictionary")
+writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
+
+saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_FHI360.xlsx",overwrite = T)
+
+#'[Engage Men's Health Feedback Tracker]
+
+#'#Filter applied to exclude  females
+EngageMensHealth_checks<-All_PrEP_widerv2 %>%
+  filter(mechanismid==86131)%>% filter(sex== "Male") %>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+  
+wb <- createWorkbook()
+write.xlsx(EngageMensHealth_checks,"Dataout/PrEP_DQRT_Feedback_EngageMensHealth.xlsx",  sheetName="Validations",append=TRUE)
+wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_EngageMensHealth.xlsx")
+
+addWorksheet(wb,"Data_dictionary")
+writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
+
+saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_EngageMensHealth.xlsx",overwrite = T)
 
 #'[ANOVA Feedback Tracker]
 
-Missing_data_ANOVA<-Append1 %>% filter(missing=="Yes") %>% filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==87577) %>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
-######Checking for Zero reproting
-flag_zeros<-Append1 %>%  filter(period>=Date & period<=reporting_period) %>% filter(mechanismid==87577) %>% mutate(zero_reporting=case_when(age=="15-19" & value==0~"Yes",
-                                                                                                                                            age=="20-24"& value==0~"Yes",
-                                                                                                                                            age=="25-29"& value==0~"Yes",
-                                                                                                                                            age=="30-34" &value==0~"Yes",
-                                                                                                                                            age=="35-39" & value==0~"Yes",
-                                                                                                                                            age=="40-44" & value==0~"Yes",
-                                                                                                                                            age=="50+" &  value==0~"Yes",TRUE~"No"))
+ANOVA_87577_checks<-All_PrEP_widerv2 %>% 
+  filter(mechanismid==87577)%>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
 
-flag<-flag_zeros$zero_reporting== "Yes"
+wb <- createWorkbook()
+write.xlsx(ANOVA_87577_checks,"Dataout/PrEP_DQRT_Feedback_ANOVA_87577.xlsx",  sheetName="Validations",append=TRUE)
+wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_ANOVA_87577.xlsx")
 
-if (flag==TRUE) {
+addWorksheet(wb,"Data_dictionary")
+writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
 
-  dlg_message(c("Please check for zero reporting before clearing the data"))
+saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_ANOVA_87577.xlsx",overwrite = T)
 
-   ""
-}
+#'[ANOVA Feedback Tracker]
 
+ANOVA_70310_checks<-All_PrEP_widerv2 %>% 
+  filter(mechanismid==70310) %>%  mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
 
+wb <- createWorkbook()
+write.xlsx(ANOVA_70310_checks,"Dataout/PrEP_DQRT_Feedback_ANOVA_70310.xlsx",  sheetName="Validations",append=TRUE)
+wb<-loadWorkbook("Dataout/PrEP_DQRT_Feedback_ANOVA_70310.xlsx")
 
+addWorksheet(wb,"Data_dictionary")
+writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
 
+saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_ANOVA_70310.xlsx",overwrite = T)
+
+rm( ANOVA_70310_checks,ANOVA_87577_checks,  BRCH_checks,  EngageMensHealth_checks,  FHI360_checks,  MaTCH_81902_checks,
+    WRHI_70301_checks,  WRHI_70306_checks,  WRHI_80007_checks,MatCH,FHI360,BRCH)
 
 
 #write_csv(AGYW_DREAMS,"AGYW_PREV_Final.csv")
-wb<-write.xlsx(Missing_data_ANOVA,"Dataout/PrEP_DQRT_Feedback_ANOVA.xlsx",sheetName="Missing Data")
-wb<-write.xlsx(Missing_data_FHI360,"Dataout/PrEP_DQRT_Feedback_FHI360.xlsx",sheetName="Missing Data")
-wb<-write.xlsx(Missing_data_MaTCH,"Dataout/PrEP_DQRT_Feedback_MaTCH.xlsx",sheetName="Missing Data")
-wb<-write.xlsx(Missing_data_BRCH,"Dataout/PrEP_DQRT_Feedback_BRCH.xlsx",sheetName="Missing Data")
-wb<-write.xlsx(Missing_data_RTC,"Dataout/PrEP_DQRT_Feedback_RTC.xlsx",sheetName="Missing Data")
-wb<-write.xlsx(Missing_data_WRHI_80007,"Dataout/PrEP_DQRT_Feedback_WRHI_80007.xlsx",sheetName="Missing Data")
-wb<-write.xlsx(Missing_data_WRHI_70306,"Dataout/PrEP_DQRT_Feedback_WRHI_70306.xlsx",sheetName="Missing Data")
-wb<-write.xlsx(Missing_data_WRHI_70301,"Dataout/PrEP_DQRT_Feedback_WRHI_70301.xlsx",sheetName="Missing Data")
 
 
-#'[End ANOVA Feedback Tracker]
+RawData<-All_PrEP_longer %>% select(indicator,	partner,	mechanismid	,country	,snu1	,snu1id,disaggregate,	psnu,	psnuuid,	age,	sex	,period,	kptype,	value)
 
-RawData<-Append1 %>% select(indicator,	partner,	mechanismid	,country	,snu1	,snu1id,	psnu,	psnuuid,	age,	sex	,period,	kptype,	value)
 
 filename<-paste(Sys.Date(), "RawData", ".xlsx")
 
-openxlsx::write.xlsx(RawData, file.path(here("Dataout"),filename),sheetName="RawData")
-
-#Gen CIRG custom list
-
-CIGR_Lst<-RawData %>% mutate(reportingperiod=perio,	orgunit	orgunituid	mech_code	partner	operatingunit	psnu	indicator	sex	age	otherdisaggregate	population	numdenom	value)
+openxlsx::write.xlsx(RawData, here("Dataout",filename),sheetName="RawData")
 
 
 
