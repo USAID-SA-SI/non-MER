@@ -70,10 +70,10 @@ conn <- aws_connect(db_name = db_name, db_user = db_user,
 
 
 # GLOBALS ----------------------------------------------------------------------
-current_month<-"2023-10" # CHANGE EACH MONTH
-current_month_full<-"2023-10-31" # CHANGE EACH MONTH
-last_month<- "2023-09" #CHANGE EACH MONTH
-current_mo_minus_3<- "2023-07" #CHANGE EACH MONTH
+current_month<-"2023-12" # CHANGE EACH MONTH
+current_month_full<-"2023-12-31" # CHANGE EACH MONTH
+last_month<- "2023-11" #CHANGE EACH MONTH
+current_mo_minus_3<- "2023-09" #CHANGE EACH MONTH
 lastQmo<-"2023-09" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"kkehoe"
@@ -511,7 +511,7 @@ targets<-mer %>%
 
 #combine -----------------------------------------------------------------------
 final_df<-df_current %>%
-  filter(mon_yr >"2023-05-31") %>% #reduce non-MER to last 6 mo only
+  filter(mon_yr >"2023-04-30") %>% #reduce non-MER to last 6 mo only
   bind_rows(targets) %>%
   left_join(pops,by="orgunit_uid") %>%
   left_join(staffing_model, by="orgunit_uid") %>%
