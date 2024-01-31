@@ -2,7 +2,7 @@
 # Title: Level Two process
 # Author: C. Trapence
 # Date:2023-07-11
-# Updated:2024:01:19
+# Updated:2024:01:23
 # Updated by Rosaline
 # Load Required libraries
 # Red text symbolizes comments
@@ -112,10 +112,10 @@ FHI360<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1H1hv4EK
 #'[Engage Men's Health]
 #Added new partner
 EngageMensHealth<- read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1xF-nuS6WR19RgJ_dFjfoOjdC_b3zsC6lSN--JCiXHD8/edit#gid=2092521029'),sheet = "4. Reporting tab") %>% mutate(kptype="")%>% mutate(disaggregate = "")%>% 
-  select( indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate, '10/31/2023':'12/31/2024') 
+  select( indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate, '10/31/2023':'12/31/2024') %>% filter (sex == "Male")
 
 #Historical Data
-All_PrEP<-bind_rows(WRHI_70301,WRHI_70306,WRHI_80007,FHI360,ANOVA_70310,MatCH, ANOVA_87577,BRCH,RTC,EngageMensHealth) 
+All_PrEP<-bind_rows(WRHI_70301,WRHI_70306,WRHI_80007,FHI360,ANOVA_70310,MatCH_81902,BRCH,RTC,EngageMensHealth) 
 
 #FY24 ONLY
 All_PrEPv2<-bind_rows(WRHI_70306,WRHI_70301_b,WRHI_80007_b,FHI360,ANOVA_70310_b,ANOVA_87577,MatCH_81902,MatCH_87576,BRCH_70287_b,RTC_70290_b,EngageMensHealth) 
@@ -123,16 +123,17 @@ All_PrEPv2<-bind_rows(WRHI_70306,WRHI_70301_b,WRHI_80007_b,FHI360,ANOVA_70310_b,
 
 #Historical Data
 #'[for DAU PrEP dashboard Raw file
-All_PrEP_longer<- All_PrEP %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% mutate(period=anydate(period)) %>% 
+All_PrEP_longer_raw<- All_PrEP %>% pivot_longer(13:52, names_to= "period", values_to = "value") %>% mutate(period=anydate(period)) %>% 
   mutate(last_refreshed=today(),End_Date=period,Start_Date=period,period_type="Monthly Cummulative within Quarter") %>%
   group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>% summarize_at(vars(value),sum,na.rm=TRUE)
 
 #FY24 Data Only
-All_PrEP_longerv2<- All_PrEPv2 %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% 
+All_PrEP_longerv2<- All_PrEPv2 %>% pivot_longer(13:52, names_to= "period", values_to = "value") %>% 
   mutate(period=anydate(period)) %>%  group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>%
   summarize(value=sum(value)) %>% mutate(missing=if_else(!is.na(value),"No","Yes")) %>% 
   mutate(check1=if_else(sex=="Female" & disaggregate!="" & !is.na(value)  ,"✔","NA")) 
 
+#Add check to flag zero reporting across all age bands
 
 #'[FLAGGING INCONSISTENCIES IN DATA FOR CORRECTION 
 
@@ -144,7 +145,7 @@ All_PrEP_longerv2<- All_PrEPv2 %>% pivot_longer(13:51, names_to= "period", value
 #'[Check6: "Validate if new PrEP enrollments surpass those with confirmed HIV test results."
 #'
 #Historical Data
-All_PrEP_longer<- All_PrEP %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% 
+All_PrEP_longer_hist<- All_PrEP %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% 
 mutate(period=anydate(period)) %>%  group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>%
 summarize(value=sum(value)) %>% mutate(missing=if_else(!is.na(value),"No","Yes")) %>% 
 mutate(check1=if_else(sex=="Female" & disaggregate!="" & !is.na(value)  ,"✔","NA")) 
@@ -162,7 +163,7 @@ All_PrEP_widerv2<- All_PrEP_longerv2 %>% pivot_wider(names_from = indicator,valu
 
 #Historical Data only
 
-All_PrEP_wider<- All_PrEP_longer %>% pivot_wider(names_from = indicator,values_from = value) %>%
+All_PrEP_wider<- All_PrEP_longer_hist %>% pivot_wider(names_from = indicator,values_from = value) %>%
 filter(period>floor_date((ymd(today()-months(2))),'month') & period<=floor_date(ymd(today()), 'month')-days(1)) %>%
 mutate(check2=if_else(sex=="Male" & disaggregate!="" & any(!is.na(c( PrEP_ELIGIBLE, PrEP_NEW , PrEP_RETURN_1MONTH,PrEP_RETURN_4MONTHS,
 PrEP_RETURN_7MONTHS,PrEP_SCREEN,PrEP_TST_NEG,PrEP_TST_POS))) ,"Clean record","NA")) %>% 
@@ -353,14 +354,14 @@ writeData(wb,sheet="Data_dictionary",x=Data_dictionary)
 
 saveWorkbook(wb,"Dataout/PrEP_DQRT_Feedback_ANOVA_70310.xlsx",overwrite = T)
 
-rm( ANOVA_70310_checks,ANOVA_87577_checks,  BRCH_checks,  EngageMensHealth_checks,  FHI360_checks,  MaTCH_81902_checks,
-    WRHI_70301_checks,  WRHI_70306_checks,  WRHI_80007_checks,MatCH,FHI360,BRCH)
+#rm( ANOVA_70310_checks,ANOVA_87577_checks,  BRCH_checks,  EngageMensHealth_checks,  FHI360_checks,  MaTCH_81902_checks,
+ #   WRHI_70301_checks,  WRHI_70306_checks,  WRHI_80007_checks,MatCH,FHI360,BRCH)
 
 
 #write_csv(AGYW_DREAMS,"AGYW_PREV_Final.csv")
 
 
-RawData<-All_PrEP_longer %>% select(indicator,	partner,	mechanismid	,country	,snu1	,snu1id,disaggregate,	psnu,	psnuuid,	age,	sex	,period,	kptype,	value)
+RawData<-All_PrEP_longer_raw %>% select(indicator,	partner,	mechanismid	,country	,snu1	,snu1id,disaggregate,	psnu,	psnuuid,	age,	sex	,period,	kptype,	value)
 
 
 filename<-paste(Sys.Date(), "RawData", ".xlsx")
