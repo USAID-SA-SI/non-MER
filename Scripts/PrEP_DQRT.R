@@ -2,7 +2,7 @@
 # Title: Level Two process
 # Author: C. Trapence
 # Date:2023-07-11
-# Updated:2024:01:23
+# Updated:2024:02:20
 # Updated by Rosaline
 # Load Required libraries
 # Red text symbolizes comments
@@ -38,7 +38,7 @@ RTC<- bind_rows(RTC_70290_a, RTC_70290_b)
 MatCH_81902<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1Dfjvf-K7O0q6i6vHQkzNCFfoSkbtMtB7NvT703GvCSY/edit#gid=1044282265k'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>% select(
   indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'10/31/2021':'12/31/2023')
 
-MatCH_87576<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1O_Cx4yAvtU5IlZjeRHtBTqTxWur2x-bGXvVPUjnXbhE/edit#gid=2092521029'), sheet = "FY24_Reporting tab") %>% mutate(kptype="")%>% select(
+MatCH_87576<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1fMq0221ZgBqxjj3qUR9_DA9ShqkNjnwjGh4qQlpfML8/edit#gid=2092521029'), sheet = "FY24_Reporting tab") %>% mutate(kptype="")%>% select(
   indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,sex,'1/31/2024':'12/31/2024')
 
 MatCH<- bind_rows(MatCH_81902, MatCH_87576)
@@ -71,7 +71,7 @@ ANOVA_87577 <-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1V
   select(indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,disaggregate, sex,'10/31/2023':'12/31/2024') %>% mutate(disaggregate = if_else(disaggregate== "N/A", "",disaggregate))  %>%mutate(disaggregate=if_else(is.na(disaggregate),"",disaggregate))
 
  #Consolidating ANOVA's historical and current data for current reporting FY24
-ANOVA_70310<-bind_rows(ANOVA_70310_a, ANOVA_70310_b)
+ANOVA_70310<-bind_rows(ANOVA_70310_a, ANOVA_70310_b, ANOVA_87577)
 
 
 #'[WRHI]
@@ -145,14 +145,14 @@ All_PrEP_longerv2<- All_PrEPv2 %>% pivot_longer(13:52, names_to= "period", value
 #'[Check6: "Validate if new PrEP enrollments surpass those with confirmed HIV test results."
 #'
 #Historical Data
-All_PrEP_longer_hist<- All_PrEP %>% pivot_longer(13:51, names_to= "period", values_to = "value") %>% 
+All_PrEP_longer_hist<- All_PrEP %>% pivot_longer(13:52, names_to= "period", values_to = "value") %>% 
 mutate(period=anydate(period)) %>%  group_by( indicator,partner,mechanismid,country,snu1 ,psnu,snu1id,psnuuid,kptype,age,sex,disaggregate,period) %>%
 summarize(value=sum(value)) %>% mutate(missing=if_else(!is.na(value),"No","Yes")) %>% 
 mutate(check1=if_else(sex=="Female" & disaggregate!="" & !is.na(value)  ,"✔","NA")) 
 
 #FY24 Data only
 All_PrEP_widerv2<- All_PrEP_longerv2 %>% pivot_wider(names_from = indicator,values_from = value) %>%
-  filter(period>floor_date((ymd(today()-months(2))),'month') & period<=floor_date(ymd(today()), 'month')-days(1)) %>%
+  filter(period>floor_date((ymd(today()-months(1))),'month') & period<=floor_date(ymd(today()), 'month')-days(1)) %>%
   mutate(check2=if_else(sex=="Male" & disaggregate!="" & any(!is.na(c( PrEP_ELIGIBLE, PrEP_NEW , PrEP_RETURN_1MONTH,PrEP_RETURN_4MONTHS,
                                                                        PrEP_RETURN_7MONTHS,PrEP_SCREEN,PrEP_TST_NEG,PrEP_TST_POS))) ,"Clean record","NA")) %>% 
   mutate(check3=if_else(PrEP_ELIGIBLE>PrEP_SCREEN ,"Clean record","✔")) %>% 
