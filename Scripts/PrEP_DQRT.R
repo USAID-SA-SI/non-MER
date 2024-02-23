@@ -71,7 +71,7 @@ ANOVA_70310_b<-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1
  
 #Reading data for new mechanism(87577) for current reporting FY24
 ANOVA_87577 <-read_sheet(as_sheets_id('https://docs.google.com/spreadsheets/d/1VfT-U-evaHeREufdMlvx58sCOGuD4GU4U-ZZw7bY4KM/edit#gid=2092521029'), sheet = "4. Reporting tab") %>% mutate(kptype="")%>%
-  select(indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,disaggregate, sex,'10/31/2023':'12/31/2024') %>% mutate(disaggregate = if_else(disaggregate== "N/A", "",disaggregate))  %>%mutate(disaggregate=if_else(is.na(disaggregate),"",disaggregate))
+  select(indicator,partner,mechanismid,country,snu1,psnu,snu1id,psnuuid,kptype,age,disaggregate, sex,'1/31/2024':'12/31/2024') %>% mutate(disaggregate = if_else(disaggregate== "N/A", "",disaggregate))  %>%mutate(disaggregate=if_else(is.na(disaggregate),"",disaggregate))
 
  #Consolidating ANOVA's historical and current data for current reporting FY24
 ANOVA_70310<-bind_rows(ANOVA_70310_a, ANOVA_70310_b)
