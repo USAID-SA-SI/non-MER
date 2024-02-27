@@ -70,11 +70,11 @@ conn <- aws_connect(db_name = db_name, db_user = db_user,
 
 
 # GLOBALS ----------------------------------------------------------------------
-current_month<-"2023-12" # CHANGE EACH MONTH
-current_month_full<-"2023-12-31" # CHANGE EACH MONTH
-last_month<- "2023-11" #CHANGE EACH MONTH
-current_mo_minus_3<- "2023-09" #CHANGE EACH MONTH
-lastQmo<-"2023-09" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
+current_month<-"2024-01" # CHANGE EACH MONTH
+current_month_full<-"2024-01-31" # CHANGE EACH MONTH
+last_month<- "2023-12" #CHANGE EACH MONTH
+current_mo_minus_3<- "2023-10" #CHANGE EACH MONTH
+lastQmo<-"2023-12" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"kkehoe"
 
@@ -352,7 +352,7 @@ nhls_c<-nhls_c %>%
 
 
 nhls_h<-nhls_h %>%
-  filter(mon_yr <= current_mo_minus_3) %>%
+  #filter(mon_yr <= current_mo_minus_3) %>%
   mutate(age=case_when(
     age=="44565" ~ "1-4",
     age=="44690" ~ "5-9",
@@ -384,8 +384,9 @@ write_tsv(nhls,here("Data/monthly",paste0(current_month,"_nhls_combined_output.t
 # REJECTIONS -------------------------------------------------------------------
 
 #subset historic rejections as new file has all of 2022
-historic_rejections_sub<-rejections_h %>%
-  filter(mon_yr <= current_mo_minus_3)
+historic_rejections_sub<-rejections_h
+#%>%
+ # filter(mon_yr <= current_mo_minus_3)
 
 prinf(distinct(historic_rejections_sub,mon_yr))
 
@@ -420,7 +421,7 @@ df_vl_rejections<-vl_rejections %>%
   count() %>%
   summarize(value = sum(n, na.rm = T)) %>%
   ungroup() %>%
-  filter(mon_yr<=current_month) %>%
+  #filter(mon_yr<=current_month) %>%
   mutate(age=case_when(
     age=="20-14" ~ "20-24",
     age=="25-19" ~ "25-29",
@@ -459,7 +460,7 @@ df_cd4_rejections<-vl_rejections %>%
   count() %>%
   summarize(value = sum(n, na.rm = T)) %>%
   ungroup() %>%
-  filter(mon_yr<=current_month) %>%
+ # filter(mon_yr<=current_month) %>%
   mutate(age=case_when(
     age=="20-14" ~ "20-24",
     age=="25-19" ~ "25-29",
@@ -485,7 +486,7 @@ write_tsv(rejections_combined,here("Data/monthly",paste0(current_month,"_rejecti
 
 # MER TARGETS ------------------------------------------------------------------
 targets<-mer %>%
-  filter(fiscal_year %in% c("2021","2022","2023"),
+  filter(fiscal_year %in% c("2021","2022","2023", "2024"),
          indicator %in% c("HTS_TST","HTS_TST_POS","HTS_INDEX","HTS_SELF","TX_NEW","TX_CURR",
                           "TX_PVLS"),
          funding_agency=="USAID",
@@ -511,7 +512,7 @@ targets<-mer %>%
 
 #combine -----------------------------------------------------------------------
 final_df<-df_current %>%
-  filter(mon_yr >"2023-04-30") %>% #reduce non-MER to last 6 mo only
+  filter(mon_yr >"2023-07-31") %>% #reduce non-MER to last 6 mo only
   bind_rows(targets) %>%
   left_join(pops,by="orgunit_uid") %>%
   left_join(staffing_model, by="orgunit_uid") %>%
@@ -531,12 +532,12 @@ final_df<-df_current %>%
 
 
 # EXPORT FILE ------------------------------------------------------------------
-filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.0.txt",sep="_")
+filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.1.txt",sep="_")
 
 write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
 
 
 
-site_att<-staffing_model %>%
-  full_join(pops, by="orgunit_uid")
+#site_att<-staffing_model %>%
+# full_join(pops, by="orgunit_uid")
