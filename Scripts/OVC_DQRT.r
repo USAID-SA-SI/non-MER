@@ -2,7 +2,7 @@
 # Author: C. Trapence
 # Purpose: Automating the process of Reporting AGYW_PREV for Inter-agency
 # Date:2023-07-04
-# Updated:2024:01:09
+# Updated:2024:02:20
 # Updated by Rosaline
 #Load Required libraries
 # Red text symbolizes comments
@@ -26,7 +26,7 @@ load_secrets()
 
 Date=(floor_date(Sys.Date() - months(0), "month"))
 
-reporting_period=floor_date(today()-months(2),"month")
+reporting_period=floor_date(today()-months(1),"month")
 
 
 columns_FY21<-c("7/31/2021","8/31/2021","9/30/2021" ,"10/31/2021","11/30/2021","12/31/2021","1/31/2022","2/28/2022","3/31/2022","4/30/2022","5/31/2022","6/30/2022","7/31/2022","8/31/2022","9/30/2022","10/31/2022","11/30/2022","12/31/2022", "1/31/2023","2/28/2023","3/31/2023","4/30/2023" ,"5/31/2023","6/30/2023" ,"7/31/2023","8/31/2023","9/30/2023")
@@ -195,11 +195,11 @@ NACOSA<-bind_rows(NACOSA_FY22,NACOSA_FY23,NACOSA_FY24)
 
 #AllData<-bind_rows(NACOSA,CINDI,HIVSA,FHI360,G2G,M2M,PACT) %>% select(-(`11/30/2024`:`12/31/2025`)) %>% select(-(`7/31/2021`:`9/30/2022`))
 
-#---------- FY24 Q1 data only
-AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24) %>% select(-(`1/31/2024`:`12/31/2025`))
+#---------- FY24 Q2 data only
+AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24) %>% select(-(`2/29/2024`:`12/31/2025`))
 
 AllDatav1<-AllData  %>% select(-(timer) ) %>% 
-  pivot_longer(cols= 10:11, values_to ="Value" ,names_to = "period") %>%
+  pivot_longer(cols= 12, values_to ="Value" ,names_to = "period") %>%
   #filter(!is.na(psnu),indicator_status=="Active") %>%
   filter(!is.na(psnu)) %>%
   group_by_if(is_character) %>% summarise(value=sum(Value))
@@ -255,6 +255,8 @@ check3_HIVSA<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="# OVC_
 check4_HIVSA<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>%
   mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>%
   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
+
+#Check 5: Zero reporting within for 3 consecutive months or zero reporting across an entire district
 
 #[Final import output below]
 
