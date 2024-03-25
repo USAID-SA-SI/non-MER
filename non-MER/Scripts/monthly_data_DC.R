@@ -70,10 +70,10 @@ conn <- aws_connect(db_name = db_name, db_user = db_user,
 
 
 # GLOBALS ----------------------------------------------------------------------
-current_month<-"2024-01" # CHANGE EACH MONTH
-current_month_full<-"2024-01-31" # CHANGE EACH MONTH
-last_month<- "2023-12" #CHANGE EACH MONTH
-current_mo_minus_3<- "2023-10" #CHANGE EACH MONTH
+current_month<-"2024-02" # CHANGE EACH MONTH
+current_month_full<-"2024-02-29" # CHANGE EACH MONTH
+last_month<- "2024-01" #CHANGE EACH MONTH
+current_mo_minus_3<- "2023-12" #CHANGE EACH MONTH
 lastQmo<-"2023-12" #CHANGE TO BE LAST MONTH OF MOST RECENTLY REPORTED MER Q
 
 myuser<-"kkehoe"
@@ -266,7 +266,9 @@ df_current<-df_historic_munge %>%
   bind_rows(df) %>%
   relocate(categoryoptioncomboname, .after = standardizeddisaggregate) %>%
   relocate(is_cleared, .after = last_refreshed) %>%
-  rename_official()
+  rename_official() %>%
+  mutate(prime_partner_name = if_else(mech_code == 87575,
+                                      "Maternal Adolescent and Child Health Institute NPC", prime_partner_name))
 
 
 
