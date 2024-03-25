@@ -63,7 +63,7 @@ HIVSA_FY24<-read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/d/1-ED
   mutate(mech_code = as.character(mech_code))%>% mutate(timer=2)
 
 ## Consolidating HIVSA's historical and FY2024 data
-HIVSA<-bind_rows(HIVSA_FY24,HIVSA_FY23)
+HIVSA<-bind_rows(HIVSA_FY24)
 
 ### FHI 360
 
@@ -199,7 +199,7 @@ NACOSA<-bind_rows(NACOSA_FY22,NACOSA_FY23,NACOSA_FY24)
 AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24) %>% select(-(`2/29/2024`:`12/31/2025`))
 
 AllDatav1<-AllData  %>% select(-(timer) ) %>% 
-  pivot_longer(cols= 12, values_to ="Value" ,names_to = "period") %>%
+  pivot_longer(cols= 9:12, values_to ="Value" ,names_to = "period") %>%
   #filter(!is.na(psnu),indicator_status=="Active") %>%
   filter(!is.na(psnu)) %>%
   group_by_if(is_character) %>% summarise(value=sum(Value))
