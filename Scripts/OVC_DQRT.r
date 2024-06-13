@@ -1,7 +1,7 @@
 # AUTHOR:   C.Trapence | USAID
 # PURPOSE:  Automating the DQRT process for OVC non_MER indicators reported by USAID partners
 # DATE:     2023-07-04
-# UPDATED:  2024-05-30
+# UPDATED:  2024-06-13
 # UPDATED BY:  R. Pineteh | USAID
 
 # SOURCE FILES-----------------------------------------------------------
@@ -10,21 +10,8 @@
 
 
 # LOAD PACKAGES -----------------------------------------------------------
-  library("glitr")
-  library("gophr")
-  library("extrafont")
-  library("scales")
-  library("tidytext")
-  library("patchwork")
-  library("ggtext")
-  library("glue")
-  library("readxl")
-  library("googlesheets4")
-  library("glamr")
-  library("tidyverse")
-
-#if(!require(pacman)) install.packages("pacman")
-#pacman::p_load(tidyverse, janitor, here, gargle,glamr,anytime,patchwork,maditr, googledrive,googlesheets4,openxlsx,lubridate,janitor,readr,stringr,sqldf)
+if(!require(pacman)) install.packages("pacman")
+  pacman::p_load(glitr, gophr, extrafont, scales, tidytext, anytime, here, patchwork, ggtext, glue, readxl, googlesheets4,glamr, tidyverse, maditr, openxlsx,readr,stringr,sqldf)
 
 
 # GLOBAL VARIABLES --------------------------------------------------------
@@ -155,15 +142,16 @@ Date <- Sys.Date()
   
 
   #---------- Update this section as follows:
-        #'["AllData" dataframe: Update the dates in the select function to exclude the (last date of the current month : 12/31/2025) for the 
+        #'["AllData" dataframe: Update the dates in the select function to exclude columns with current and future dates (last date of the current month : 12/31/2025) 
         #'["AllData_v1" dataframe: update the column index (cols= ...) to grab the index of the column containing the reporting period in the pivot_longer function 
-        #'[ Send flags to partners
-        #'[After flags have been resolved, update the the column index (cols= ...) for "AllData_v1" dataframe:  to grab the indices of the columns containing the current FY to reporting period in the pivot_longer function]
-  
-  AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24) %>% select(-(`5/31/2024`:`12/31/2025`))
+        #'[ Communicate with partners who have not reported their monthly data as level2 checks will not work without data
+        #'[ Share flags with partners in their feedback tracker
+        #'[ After flags have been resolved, rerun the script to output clean data and share with DAU]
+
+  AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24) %>% select(-(`6/30/2024`:`12/31/2025`))
   
   AllDatav1<-AllData  %>% select(-(timer) ) %>% 
-    pivot_longer(cols= 9:15, values_to ="Value" ,names_to = "period") %>%  
+    pivot_longer(cols= 9:16, values_to ="Value" ,names_to = "period") %>%  
     filter(!is.na(psnu)) %>%
     group_by_if(is_character) %>% summarise(value=sum(Value))
   
@@ -177,25 +165,24 @@ Date <- Sys.Date()
     mutate(partnershort=if_else(mech_code == "80008"  | mech_code== "80002","NACOSA",primepartner)) 
   
   # Preparing data for DQRT Level 1 and Level 2 checks
-  DQRT_temp1<-OutputTableau %>%
+  DQRT_temp1 <- OutputTableau %>%
     group_by( mech_code ,primepartner, psnu,community,indicator ,last_refreshed,disaggregate ,age,otherdisaggregate , community_status, Start_Date,period,period_type  ,missing ) %>%
     summarise(value=sum(value))
   
   DQRT_temp2<-DQRT_temp1  %>% filter(age=="<18" ) %>% dplyr::group_by(primepartner,mech_code,psnu,community,age,period,indicator) %>%
     dplyr::summarise(value=sum(value))
   
-  #'[Level Two checks flags:
+  #'[Level One and Two checks/flags:
   
-  level2<-maditr::dcast(setDT(DQRT_temp2),... ~ indicator,value.var = "value") %>%
-    mutate(OVC_HIVSTAT=OVC_HIVSTAT_Negative  +`OVC_HIVSTAT_Positive_Not Receiving ART`+`OVC_HIVSTAT_Positive_Receiving ART`+
-             `OVC_HIVSTAT_Test Not Required`+`OVC_HIVSTAT_Unknown_No HIV Status`)%>%
+  level2 <- maditr::dcast(setDT(DQRT_temp2),... ~ indicator,value.var = "value") %>% filter(period == reporting_period) %>% 
+    mutate(OVC_HIVSTAT=OVC_HIVSTAT_Negative  +`OVC_HIVSTAT_Positive_Not Receiving ART`+`OVC_HIVSTAT_Positive_Receiving ART`+`OVC_HIVSTAT_Test Not Required`+`OVC_HIVSTAT_Unknown_No HIV Status`)%>%
     select( primepartner,mech_code,psnu,community,period,age,OVC_HIVSTAT_Negative :OVC_HIVSTAT )%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") 
   
   #'[HIVSA Partner feedback]
   
   #Missing data
-  Missing_data_HIVSA<-OutputTableau %>%  filter(missing=="Yes") %>% filter(period<Date & period>= reporting_period ) %>%
+  Missing_data_HIVSA<-OutputTableau %>%  filter(missing=="Yes") %>% filter(period== reporting_period ) %>%
     mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
     filter(mech_code=="70307")
   
@@ -249,7 +236,7 @@ Date <- Sys.Date()
   
   # Checking for missing data
   Missing_data_PACT<-OutputTableau %>% filter(missing=="Yes"  ) %>%   mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
-    filter(mech_code=="86130")
+    filter(mech_code=="86130")%>% filter(period== reporting_period )
   
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
@@ -294,7 +281,7 @@ Date <- Sys.Date()
   
   # Checking for missing data
   Missing_data_G2G<-OutputTableau %>% filter(missing=="Yes")%>%   mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
-    filter(mech_code=="81904")
+    filter(mech_code=="81904")%>% filter(period== reporting_period )
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
   check1_G2G<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
@@ -338,7 +325,7 @@ Date <- Sys.Date()
   
   # Checking for missing data
   Missing_data_M2M <-OutputTableau %>% filter(missing=="Yes") %>%    mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
-    filter(mech_code=="80004")
+    filter(mech_code=="80004")%>% filter(period== reporting_period )
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
   check1_M2M<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
@@ -383,7 +370,7 @@ Date <- Sys.Date()
   
   #Checking for missing data
   Missing_data_CINDI<-OutputTableau %>%filter(missing=="Yes")%>% mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
-    filter(mech_code=="70311")
+    filter(mech_code=="70311")%>% filter(period== reporting_period )
   
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
@@ -427,7 +414,7 @@ Date <- Sys.Date()
   #'[NACOSA Partner feedback]
   # Checking for missing data
   Missing_data_NACOSA<-OutputTableau %>% filter(missing=="Yes") %>% mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
-    filter(mech_code=="80008")
+    filter(mech_code=="80008")%>% filter(period== reporting_period )
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
   check1_NACOSA<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
@@ -463,13 +450,13 @@ Date <- Sys.Date()
   #'[NACOSA END]
   
   saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_NACOSA.xlsx",overwrite = T)
-  rm(NACOSA,NACOSA_FY22,NACOSA_FY23,NACOSA_FY24, check1_NACOSA,check2_NACOSA, check3_NACOSA, check4_NACOSA, Missing_data_NACOSA)
+  rm(NACOSA,NACOSA_FY23,NACOSA_FY24, check1_NACOSA,check2_NACOSA, check3_NACOSA, check4_NACOSA, Missing_data_NACOSA)
   
   #'[MATCH Partner feedback]
   #
   # Checking for missing data
   Missing_data_MATCH<-OutputTableau %>% filter(missing=="Yes") %>% mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
-    filter(mech_code=="87576")
+    filter(mech_code=="87576")%>% filter(period== reporting_period )
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
   check1_MATCH<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
@@ -503,6 +490,7 @@ Date <- Sys.Date()
   addWorksheet(wb,sheetName = "Missing_Data")
   writeData(wb,sheet = "Missing_Data",x=Missing_data_MATCH)
   saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_MATCH.xlsx",overwrite = T)
+  rm(MATCH_FY24, check1_MATCH,check2_MATCH, check3_MATCH, check4_MATCH, Missing_data_MATCH)
   
   #'[MATCH END]
   #'
@@ -517,6 +505,9 @@ Date <- Sys.Date()
   
   
   write.xlsx(OutputTableau,"Dataout/OVC_OutputTableauv3.xlsx",sheetName="1OutputTableau",apppend=T)
+  
+  
+  
   
 
 
