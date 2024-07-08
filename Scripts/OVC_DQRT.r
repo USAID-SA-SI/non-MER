@@ -144,14 +144,14 @@ Date <- Sys.Date()
   #---------- Update this section as follows:
         #'["AllData" dataframe: Update the dates in the select function to exclude columns with current and future dates (last date of the current month : 12/31/2025) 
         #'["AllData_v1" dataframe: update the column index (cols= ...) to grab the index of the column containing the reporting period in the pivot_longer function 
-        #'[ Communicate with partners who have not reported their monthly data as level2 checks will not work without data
+        #'[ Communicate with partners who have not reported their monthly data as level2 checks will not run without data
         #'[ Share flags with partners in their feedback tracker
         #'[ After flags have been resolved, rerun the script to output clean data and share with DAU]
 
-  AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24) %>% select(-(`6/30/2024`:`12/31/2025`))
+  AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24) %>% select(-(`7/31/2024`:`12/31/2025`))
   
   AllDatav1<-AllData  %>% select(-(timer) ) %>% 
-    pivot_longer(cols= 9:16, values_to ="Value" ,names_to = "period") %>%  
+    pivot_longer(cols= 9:17, values_to ="Value" ,names_to = "period") %>%  
     filter(!is.na(psnu)) %>%
     group_by_if(is_character) %>% summarise(value=sum(Value))
   
