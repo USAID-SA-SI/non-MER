@@ -1,12 +1,12 @@
 # AUTHOR:   C.Trapence | USAID
 # PURPOSE:  Automating the DQRT process for OVC non_MER indicators reported by USAID partners
 # DATE:     2023-07-04
-# UPDATED:  2024-07-08
+# UPDATED:  2024-09-16
 # UPDATED BY:  R. Pineteh | USAID
 
 # SOURCE FILES-----------------------------------------------------------
 
- #'[Source files used in the script include Partner Google Sheets
+ #'[Source files used in the script include Partner Google Sheets]
 
 
 # LOAD PACKAGES -----------------------------------------------------------
@@ -144,14 +144,14 @@ Date <- Sys.Date()
   #---------- Update this section as follows:
         #'["AllData" dataframe: Update the dates in the select function to exclude columns with current and future dates (last date of the current month : 12/31/2025) 
         #'["AllData_v1" dataframe: update the column index (cols= ...) to grab the index of the column containing the reporting period in the pivot_longer function 
-        #'[ Communicate with partners who have not reported their monthly data as level2 checks will not run without data
+        #'[ Communicate with partners who have not reported their monthly data as level2 checks will not work without data
         #'[ Share flags with partners in their feedback tracker
         #'[ After flags have been resolved, rerun the script to output clean data and share with DAU]
 
-  AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24) %>% select(-(`7/31/2024`:`12/31/2025`))
+  AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24) %>% select(-(`9/30/2024`:`12/31/2025`))
   
   AllDatav1<-AllData  %>% select(-(timer) ) %>% 
-    pivot_longer(cols= 9:17, values_to ="Value" ,names_to = "period") %>%  
+    pivot_longer(cols= 9:19, values_to ="Value" ,names_to = "period") %>%  
     filter(!is.na(psnu)) %>%
     group_by_if(is_character) %>% summarise(value=sum(Value))
   
@@ -169,7 +169,7 @@ Date <- Sys.Date()
     group_by( mech_code ,primepartner, psnu,community,indicator ,last_refreshed,disaggregate ,age,otherdisaggregate , community_status, Start_Date,period,period_type  ,missing ) %>%
     summarise(value=sum(value))
   
-  DQRT_temp2<-DQRT_temp1  %>% filter(age=="<18" ) %>% dplyr::group_by(primepartner,mech_code,psnu,community,age,period,indicator) %>%
+  DQRT_temp2<-DQRT_temp1  %>% filter(age=="<18"| age == "18-20" ) %>% dplyr::group_by(primepartner,mech_code,psnu,community,age,period,indicator) %>%
     dplyr::summarise(value=sum(value))
   
   #'[Level One and Two checks/flags:
@@ -179,12 +179,47 @@ Date <- Sys.Date()
     select( primepartner,mech_code,psnu,community,period,age,OVC_HIVSTAT_Negative :OVC_HIVSTAT )%>%
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") 
   
+  # Indicators not reported
+  # OutputTableau <- OutputTableau %>%
+  #   filter(period == reporting_period) %>%
+  #   mutate(indicator_report = ifelse(
+  #     indicator %in% c("OVC_HIVSTAT_Positive_Receiving ART",
+  #                      "OVC_HIVSTAT_Positive_Not Receiving ART",
+  #                      "OVC_HIVSTAT_Negative",
+  #                      "OVC_HIVSTAT_Test Not Required",
+  #                      "OVC_HIVSTAT_Unknown_No HIV Status",
+  #                      #"OVC_SERV_EWG_Service Lapse",
+  #                      "OVC_SERV_Potentially Active",
+  #                      "OVC_SERV_Comprehensive",
+  #                      "OVC_SERV_Preventive",
+  #                      "OVC_SERV_ Preventive",
+  #                      "OVC_SERV_DREAMS",
+  #                      "OVC_SERV Active Graduation readiness",
+  #                     # "OVC_SERV Active referred for TB_Screening",
+  #                     # "OVC_SERV Active referred for family planning",
+  #                      "OVC_VLR",
+  #                      "OVC_VLS",
+  #                      "OVC_VL_ELIGIBLE"),
+  #     "indicator_reported",
+  #     "indicator_notreported"
+  #   ))
+  # 
+  # Missing_ind_MATCH<-OutputTableau %>% filter(indicator_report=="indicator_notreported") %>% mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+  #   filter(mech_code=="87576")%>% filter(period== reporting_period )
+  # 
+  # Missing_ind_G2G_<-OutputTableau %>%  mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+  #   filter(mech_code=="81904")%>% filter(period== reporting_period )
+  
+  
+  --------------------------------------------------------------------------
   #'[HIVSA Partner feedback]
   
   #Missing data
   Missing_data_HIVSA<-OutputTableau %>%  filter(missing=="Yes") %>% filter(period== reporting_period ) %>%
     mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
     filter(mech_code=="70307")
+  
+
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
   check1_HIVSA<-level2 %>% mutate(check1 = OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>%
@@ -204,13 +239,27 @@ Date <- Sys.Date()
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
   
   #Check 4:OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
-  check4_HIVSA<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>%
+  check4_HIVSA<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>%
     mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
-  
-  #Check 5: Zero reporting within for 3 consecutive months or zero reporting across an entire district
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")  
   
 
+  
+  #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
+  check5_HIVSA<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+  mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
+  
+  #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
+  
+  check6_HIVSA<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
+  
+  
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   wb <- createWorkbook()
   write.xlsx(check1_HIVSA,"Dataout/OVC_DQRT_Feedback_HIVSA.xlsx",  sheetName="Check1",append=TRUE)
@@ -226,11 +275,17 @@ Date <- Sys.Date()
   addWorksheet(wb,"check4")
   writeData(wb,sheet="check4",x=check4_HIVSA)
   
+  addWorksheet(wb,"check5")
+  writeData(wb,sheet="check5",x=check5_HIVSA)
+  
+  addWorksheet(wb,"check6")
+  writeData(wb,sheet="check6",x=check6_HIVSA)
+  
   addWorksheet(wb,sheetName = "Missing_Data")
   writeData(wb,sheet = "Missing_Data",x=Missing_data_HIVSA)
   
   saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_HIVSA.xlsx",overwrite = T)
-  rm(HIVSA,HIVSA_FY23,HIVSA_FY24,check1_HIVSA,check2_HIVSA,check3_HIVSA,check4_HIVSA,Missing_data_HIVSA)
+ # rm(HIVSA,HIVSA_FY23,HIVSA_FY24,check1_HIVSA,check2_HIVSA,check3_HIVSA,check4_HIVSA,Missing_data_HIVSA)
   
   #'[PACT Partner feedback]
   
@@ -255,6 +310,20 @@ Date <- Sys.Date()
   check4_PACT<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>%
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="86130")
   
+  
+  #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
+  check5_PACT<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="86130")
+  
+  #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
+  
+  check6_PACT<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="86130")
+  
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_PACT,"Dataout/OVC_DQRT_Feedback_PACT.xlsx",  sheetName="Check1",append=TRUE)
   
@@ -269,11 +338,18 @@ Date <- Sys.Date()
   addWorksheet(wb,"check4")
   writeData(wb,sheet="check4",x=check4_PACT)
   
+  addWorksheet(wb,"check5")
+  writeData(wb,sheet="check5",x=check5_PACT)
+  
+  addWorksheet(wb,"check6")
+  writeData(wb,sheet="check6",x=check6_PACT)
+  
+  
   addWorksheet(wb,sheetName = "Missing_Data")
   writeData(wb,sheet = "Missing_Data",x=Missing_data_PACT)
   
   saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_PACT.xlsx",overwrite = T)
-  rm(check1_PACT,check2_PACT,check3_PACT,check4_PACT,Missing_data_PACT,PACT,PACT_FY23,PACT_FY24)
+ # rm(check1_PACT,check2_PACT,check3_PACT,check4_PACT,Missing_data_PACT,PACT,PACT_FY23,PACT_FY24)
   #'[PACT END]
   
   
@@ -299,6 +375,19 @@ Date <- Sys.Date()
   check4_G2G<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>%
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="81904")
   
+  #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
+  check5_G2G<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="81904")
+  
+  #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
+  
+  check6_G2G<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="81904")
+  
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_G2G,"Dataout/OVC_DQRT_Feedback_G2G.xlsx",  sheetName="Check1",append=TRUE)
   
@@ -313,11 +402,18 @@ Date <- Sys.Date()
   addWorksheet(wb,"check4")
   writeData(wb,sheet="check4",x=check4_G2G)
   
+  addWorksheet(wb,"check5")
+  writeData(wb,sheet="check5",x=check5_G2G)
+  
+  addWorksheet(wb,"check6")
+  writeData(wb,sheet="check6",x=check6_G2G)
+  
+  
   addWorksheet(wb,sheetName = "Missing_Data")
   writeData(wb,sheet = "Missing_Data",x=Missing_data_G2G)
   
   saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_G2G.xlsx",overwrite = T)
-  rm(G2G,G2G_FY23,G2G_FY24,check1_G2G,check2_G2G,check3_G2G,check4_G2G,Missing_data_G2G)
+ # rm(G2G,G2G_FY23,G2G_FY24,check1_G2G,check2_G2G,check3_G2G,check4_G2G,Missing_data_G2G)
   #'[G2G END]
   
   
@@ -343,6 +439,19 @@ Date <- Sys.Date()
   check4_M2M<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>%
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")
   
+  #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
+  check5_M2M<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")
+  
+  #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
+  
+  check6_M2M<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")
+  
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_M2M,"Dataout/OVC_DQRT_Feedback_M2M.xlsx",  sheetName="Check1",append=TRUE)
   
@@ -357,12 +466,18 @@ Date <- Sys.Date()
   addWorksheet(wb,"check4")
   writeData(wb,sheet="check4",x=check4_M2M)
   
+  addWorksheet(wb,"check5")
+  writeData(wb,sheet="check5",x=check5_M2M)
+  
+  addWorksheet(wb,"check6")
+  writeData(wb,sheet="check6",x=check6_M2M)
+  
   addWorksheet(wb,sheetName = "Missing_Data")
   writeData(wb,sheet = "Missing_Data",x=Missing_data_M2M)
   
   saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_M2M.xlsx",overwrite = T)
   
-  rm(M2M,M2M_FY23,M2M_FY24, check1_M2M,check2_M2M,check3_M2M,check4_M2M,Missing_data_M2M)
+ # rm(M2M,M2M_FY23,M2M_FY24, check1_M2M,check2_M2M,check3_M2M,check4_M2M,Missing_data_M2M)
   #'[M2M END]
   
   
@@ -380,12 +495,27 @@ Date <- Sys.Date()
   #Check 2:HIVSTAT More that OVC COMPREHENSIVE
   check2_CINDI<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
     filter(mech_code=="70311")
+  
   #Check 3:OVC VLS>OVC_VLR
   check3_CINDI<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="# OVC_VL Suppression >OVC_VL_ELIGIBLE")%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% filter(check3==TRUE) %>%
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")
   
   #Check 4:HIVSTAT More that OVC COMPREHENSIVE
   check4_CINDI<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")
+  
+  
+  #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
+  check5_CINDI<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")
+  
+  #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
+  
+  check6_CINDI<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")
   
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
@@ -402,12 +532,19 @@ Date <- Sys.Date()
   addWorksheet(wb,"check4")
   writeData(wb,sheet="check4",x=check4_CINDI)
   
+  addWorksheet(wb,"check5")
+  writeData(wb,sheet="check5",x=check5_CINDI)
+  
+  addWorksheet(wb,"check6")
+  writeData(wb,sheet="check6",x=check6_CINDI)
+  
+  
   addWorksheet(wb,sheetName = "Missing_Data")
   writeData(wb,sheet = "Missing_Data",x=Missing_data_CINDI)
   
   saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_CINDI.xlsx",overwrite = T)
   
-  rm(CINDI,CINDI_FY23, CINDI_FY24,check1_CINDI,check2_CINDI,check3_CINDI,check4_CINDI, Missing_data_CINDI)
+#  rm(CINDI,CINDI_FY23, CINDI_FY24,check1_CINDI,check2_CINDI,check3_CINDI,check4_CINDI, Missing_data_CINDI)
   #'[CINDI END]
   
   
@@ -431,6 +568,18 @@ Date <- Sys.Date()
   check4_NACOSA<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>%
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80008")
   
+  #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
+  check5_NACOSA<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80008")
+  
+  #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
+    check6_NACOSA<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80008")
+  
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_NACOSA,"Dataout/OVC_DQRT_Feedback_NACOSA.xlsx",  sheetName="Check1",append=TRUE)
   
@@ -445,12 +594,19 @@ Date <- Sys.Date()
   addWorksheet(wb,"check4")
   writeData(wb,sheet="check4",x=check4_NACOSA)
   
+  addWorksheet(wb,"check5")
+  writeData(wb,sheet="check5",x=check5_NACOSA)
+  
+  addWorksheet(wb,"check6")
+  writeData(wb,sheet="check6",x=check6_NACOSA)
+  
+  
   addWorksheet(wb,sheetName = "Missing_Data")
   writeData(wb,sheet = "Missing_Data",x=Missing_data_NACOSA)
   #'[NACOSA END]
   
   saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_NACOSA.xlsx",overwrite = T)
-  rm(NACOSA,NACOSA_FY23,NACOSA_FY24, check1_NACOSA,check2_NACOSA, check3_NACOSA, check4_NACOSA, Missing_data_NACOSA)
+#  rm(NACOSA,NACOSA_FY23,NACOSA_FY24, check1_NACOSA,check2_NACOSA, check3_NACOSA, check4_NACOSA, Missing_data_NACOSA)
   
   #'[MATCH Partner feedback]
   #
@@ -473,6 +629,18 @@ Date <- Sys.Date()
   check4_MATCH<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% mutate(Check_description=" OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18")%>%
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87576")
   
+  #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
+  check5_MATCH<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87576")
+  
+  #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
+  check6_MATCH<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87576")
+  
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_MATCH,"Dataout/OVC_DQRT_Feedback_MATCH.xlsx",  sheetName="Check1",append=TRUE)
   
@@ -487,10 +655,16 @@ Date <- Sys.Date()
   addWorksheet(wb,"check4")
   writeData(wb,sheet="check4",x=check4_MATCH)
   
+  addWorksheet(wb,"check5")
+  writeData(wb,sheet="check5",x=check5_MATCH)
+  
+  addWorksheet(wb,"check6")
+  writeData(wb,sheet="check6",x=check6_MATCH)
+  
   addWorksheet(wb,sheetName = "Missing_Data")
   writeData(wb,sheet = "Missing_Data",x=Missing_data_MATCH)
   saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_MATCH.xlsx",overwrite = T)
-  rm(MATCH_FY24, check1_MATCH,check2_MATCH, check3_MATCH, check4_MATCH, Missing_data_MATCH)
+#  rm(MATCH_FY24, check1_MATCH,check2_MATCH, check3_MATCH, check4_MATCH, Missing_data_MATCH)
   
   #'[MATCH END]
   #'
@@ -509,5 +683,3 @@ Date <- Sys.Date()
   
   
   
-
-
