@@ -1,7 +1,7 @@
 # AUTHOR:   C.Trapence | USAID
 # PURPOSE:  Automating the DQRT process for OVC non_MER indicators reported by USAID partners
 # DATE:     2023-07-04
-# UPDATED:  2024-09-16
+# UPDATED:  2024-04-10
 # UPDATED BY:  R. Pineteh | USAID
 
 # SOURCE FILES-----------------------------------------------------------
@@ -148,10 +148,10 @@ Date <- Sys.Date()
         #'[ Share flags with partners in their feedback tracker
         #'[ After flags have been resolved, rerun the script to output clean data and share with DAU]
 
-  AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24) %>% select(-(`9/30/2024`:`12/31/2025`))
+  AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24) %>% select(-(`10/31/2024`:`12/31/2025`))
   
   AllDatav1<-AllData  %>% select(-(timer) ) %>% 
-    pivot_longer(cols= 9:19, values_to ="Value" ,names_to = "period") %>%  
+    pivot_longer(cols= 9:20, values_to ="Value" ,names_to = "period") %>%  
     filter(!is.na(psnu)) %>%
     group_by_if(is_character) %>% summarise(value=sum(Value))
   
