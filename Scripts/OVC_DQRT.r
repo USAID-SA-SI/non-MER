@@ -1,7 +1,7 @@
 # AUTHOR:   C.Trapence | USAID
 # PURPOSE:  Automating the DQRT process for OVC non_MER indicators reported by USAID partners
 # DATE:     2023-07-04
-# UPDATED:  2024-11-18
+# UPDATED:  2024-11-20
 # UPDATED BY:  R. Pineteh | USAID
 
 # SOURCE FILES-----------------------------------------------------------
@@ -42,8 +42,10 @@ Date <- Sys.Date()
   mutate(mech_code = as.character(mech_code))%>% mutate(timer=1)
   
   ## Reading data for current reporting period 
-  HIVSA_FY24<-read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/d/1-EDzs3Wxf-T6r6SJ_AepsqDbln-LAM8fwy9IPhLvd8g/edit#gid=147779424"), sheet = "FY24_Reporting_Tool") %>% 
-  mutate(mech_code = as.character(mech_code))%>% mutate(timer=2)
+  HIVSA_FY24_<-read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/d/1-EDzs3Wxf-T6r6SJ_AepsqDbln-LAM8fwy9IPhLvd8g/edit#gid=147779424"), sheet = "FY24_Reporting_Tool") %>% 
+  mutate(mech_code = as.character(mech_code))%>% mutate(timer=2) 
+  
+
   
   ## Consolidating HIVSA's historical and current data
   HIVSA<-bind_rows(HIVSA_FY24,HIVSA_FY23)
@@ -257,7 +259,9 @@ Date <- Sys.Date()
   check6_HIVSA<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
     select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307") %>% 
+    filter(community != "gp Lesedi Local Municipality")   #IP indicated via email on 20/11/2024 that they no longer implementing OVC Serve Comprehensive for Lesedi sub-district
+  
   
   
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
@@ -382,7 +386,7 @@ Date <- Sys.Date()
   
   #Check 4:OVC_VLS > OVC_VL_ELIGIBLE
   check4_G2G<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
-    filter(check4==TRUE) %>% mutate(Check_description= Check_description= " OVC_VL Suppression > OVC_VL Eligible" )%>%
+    filter(check4==TRUE) %>% mutate(Check_description= " OVC_VL Suppression > OVC_VL Eligible" )%>%
     mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="81904")
   
   #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
