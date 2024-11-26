@@ -544,7 +544,6 @@ final_df<-df_current %>%
 
 # EXPORT FILE ------------------------------------------------------------------
 filename<-paste(current_month_full,"monthly_nonmer_data_combined_v1.0.txt",sep="_")
-
 write_tsv(final_df, file.path(here("Dataout/monthly"),filename),na="")
 
 
