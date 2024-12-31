@@ -1,13 +1,25 @@
 # AUTHOR:   C.Trapence | USAID
 # PURPOSE:  Automating the DQRT process for OVC non_MER indicators reported by USAID partners
 # DATE:     2023-07-04
-# UPDATED:  2024-11-20
+# UPDATED:  2024-12-31
 # UPDATED BY:  R. Pineteh | USAID
+
+#'[OVC partners (past & current)
+
+    #'[HIVSA     -70307
+    #'[FHI 360   - 14295
+    #'[PACT Inc  - 14631 & 86130
+    #'[M2M       - 80004
+    #'[CINDI     - 70311
+    #'[G2G       - 81904
+    #'[MATCH     - 87576
+    #'[NACOSA    - 80002 & 80008
+    #'[CHOICE    - 87581
+    #'[NICDAM    - 87583
 
 # SOURCE FILES-----------------------------------------------------------
 
  #'[Source files used in the script include Partner Google Sheets]
-
 
 # LOAD PACKAGES -----------------------------------------------------------
 if(!require(pacman)) install.packages("pacman")
@@ -42,11 +54,10 @@ Date <- Sys.Date()
   mutate(mech_code = as.character(mech_code))%>% mutate(timer=1)
   
   ## Reading data for current reporting period 
-  HIVSA_FY24_<-read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/d/1-EDzs3Wxf-T6r6SJ_AepsqDbln-LAM8fwy9IPhLvd8g/edit#gid=147779424"), sheet = "FY24_Reporting_Tool") %>% 
+  HIVSA_FY24<-read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/d/1-EDzs3Wxf-T6r6SJ_AepsqDbln-LAM8fwy9IPhLvd8g/edit#gid=147779424"), sheet = "FY24_Reporting_Tool") %>% 
   mutate(mech_code = as.character(mech_code))%>% mutate(timer=2) 
   
 
-  
   ## Consolidating HIVSA's historical and current data
   HIVSA<-bind_rows(HIVSA_FY24,HIVSA_FY23)
   
@@ -136,15 +147,18 @@ Date <- Sys.Date()
   mutate(mech_code = as.character(mech_code))%>% mutate(timer=2)
   
   
-  ## Consolidating NACOSA's historical and FY2024 data
+  ## Consolidating NACOSA's historical and current data
   NACOSA<-bind_rows(NACOSA_FY23,NACOSA_FY24)
   
   #'[CHOICE (87581)]
   # Reading data for current reporting period 
- # range_CHOICE <- "A2:V415"
- # CHOICE_FY25 <- read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/d/1KzQ-aTpb4ODDIDQjVw60CGLmmp6elsLT/edit?gid=582477089#gid=582477089"), sheet = "FY25_Reporting_Tool", range = range_CHOICE) %>%
- #   mutate(mech_code = as.character(mech_code))%>% mutate(timer=2)
+  CHOICE_FY25 <- read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/d/1T_DJb9NGydmrYQUkRwpyYOq0p25uHD98C-0rGw5o2og/edit?gid=582477089"), sheet = "FY25_Reporting_Tool") %>%
+ mutate(mech_code = as.character(mech_code))%>% mutate(timer=2)
   
+  #'[NICDAM (87583)]-NICDAM will start reporting in FY25Q2
+  #'Reading data for current reporting period 
+  #NICDAM_FY25 <- read_sheet(as_sheets_id("https://docs.google.com/spreadsheets/d/13fyAjBChn3a3W7gyiMBpID-tYRAA-0mqivZRWbHFnlc/edit?gid=2041408209#gid=2041408209"), sheet = "FY25_Reporting_Tool") %>%
+    #mutate(mech_code = as.character(mech_code))%>% mutate(timer=2)
   
   #'[Consolidating data from all partners (historical and current data)]
   
@@ -156,13 +170,13 @@ Date <- Sys.Date()
         #'[ Share flags with partners in their feedback tracker
         #'[ After flags have been resolved, rerun the script to output clean data and share with DAU]
 
-  AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24) %>% select(-(`11/30/2024`:`12/31/2025`))
- # AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24, CHOICE_FY25) %>% select(-(`10/31/2024`:`12/31/2025`))
+ # AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24,CHOICE_FY25, NICDAM_FY25) %>% select(-(`12/31/2024`:`12/31/2025`)) 1/31/2025
+ AllData <- bind_rows(HIVSA_FY24,PACT_FY24,M2M_FY24, CINDI_FY24, G2G_FY24,NACOSA_FY24, MATCH_FY24, CHOICE_FY25) %>% select(-(`12/31/2024`:`12/31/2025`))
   
    write.xlsx(AllData,"Dataout/Alldata.xlsx",sheetName="Alldata")
   
   AllDatav1<-AllData  %>% select(-(timer) ) %>% 
-    pivot_longer(cols= 9:21, values_to ="Value" ,names_to = "period") %>%  
+    pivot_longer(cols= 9:23, values_to ="Value" ,names_to = "period") %>%  
     filter(!is.na(psnu)) %>%
     group_by_if(is_character) %>% summarise(value=sum(Value))
   
@@ -229,37 +243,50 @@ Date <- Sys.Date()
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
   check1_HIVSA<-level2 %>% mutate(check1 = OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>%
-    select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
-    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
+    select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>%
+    filter(check1==TRUE) %>%
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="70307")
   
   #Check 2:HIVSTAT More that OVC COMPREHENSIVE
-  check2_HIVSA<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>%
-    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
+  check2_HIVSA<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>%
+    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% 
+    filter(check2==TRUE) %>%  
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
     filter(mech_code=="70307")
  
   #Check 3: OVC_VLS > OVC_VLR
   check3_HIVSA<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression > OVC_VL Result")%>%
-    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% filter(check3==TRUE) %>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
+    filter(check3==TRUE) %>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="70307")
   
   #Check 4:OVC_VLS > OVC_VL_ELIGIBLE
   check4_HIVSA<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
+    filter(check4==TRUE) %>%
     mutate(Check_description=" OVC_VL Suppression > OVC_VL Eligible")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")  
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="70307")  
   
   #Check 5: This looks at instances where OVC Preventive is reported together with OVC_VL_ELIGIBLE
   check5_HIVSA<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% 
+    filter(check5==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="70307")
   
   #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
   
   check6_HIVSA<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% 
+    filter(check6==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70307") %>% 
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="70307") %>% 
     filter(community != "gp Lesedi Local Municipality")   #IP indicated via email on 20/11/2024 that they no longer implementing OVC Serve Comprehensive for Lesedi sub-district
   
   
@@ -294,13 +321,18 @@ Date <- Sys.Date()
   #'[PACT Partner feedback]
   
   # Checking for missing data
-  Missing_data_PACT<-OutputTableau %>% filter(missing=="Yes"  ) %>%   mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
-    filter(mech_code=="86130")%>% filter(period== reporting_period )
+  Missing_data_PACT<-OutputTableau %>% filter(missing=="Yes"  ) %>%   
+    mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+    filter(mech_code=="86130")%>% 
+    filter(period== reporting_period )
   
   
   #Check 1 :This looks at instances where the number Eligible for VL is more than those receiving ART .
-  check1_PACT<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
-    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="86130")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
+  check1_PACT<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% 
+    select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% 
+    filter(check1==TRUE) %>%
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="86130")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
   
   #Check 2:HIVSTAT More that OVC COMPREHENSIVE
   check2_PACT<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% 
@@ -311,28 +343,36 @@ Date <- Sys.Date()
   
   #Check 3:OVC VLS>OVC_VLR
   check3_PACT<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription=" OVC_VL Suppression >OVC_VL_Result")%>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% filter(check3==TRUE) %>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="86130")
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
+    filter(check3==TRUE) %>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="86130")
   
   #Check 4:OVC_VLS > OVC_VL_ELIGIBLE
-  check4_PACT<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
+  check4_PACT<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
     filter(check4==TRUE) %>% 
     mutate(Check_description= "OVC_VL Suppression > OVC_VL Eligible")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="86130")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="86130")
   
   
   #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
   check5_PACT<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>%
+    filter(check5==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="86130")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="86130")
   
   #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
   
   check6_PACT<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>%
+    filter(check6==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="86130")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="86130")
   
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_PACT,"Dataout/OVC_DQRT_Feedback_PACT.xlsx",  sheetName="Check1",append=TRUE)
@@ -366,41 +406,56 @@ Date <- Sys.Date()
   #'[G2G Partner feedback]
   
   # Checking for missing data
-  Missing_data_G2G<-OutputTableau %>% filter(missing=="Yes")%>%   mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+  Missing_data_G2G<-OutputTableau %>% filter(missing=="Yes")%>%  
+    mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
     filter(mech_code=="81904")%>% filter(period== reporting_period )
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
   check1_G2G<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% 
-    select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
-    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="81904")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
+    select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% 
+    filter(check1==TRUE) %>%
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="81904")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
   
   #Check 2:HIVSTAT More that OVC COMPREHENSIVE
-  check2_G2G<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% 
-    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
+  check2_G2G<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% 
+    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>%
+    filter(check2==TRUE) %>%  
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
     filter(mech_code=="81904")
   
   #Check 3:OVC VLS>OVC_VLR
-  check3_G2G<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL_Result")%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
+  check3_G2G<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL_Result")%>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
     filter(check3==TRUE) %>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="81904")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="81904")
   
   #Check 4:OVC_VLS > OVC_VL_ELIGIBLE
-  check4_G2G<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
-    filter(check4==TRUE) %>% mutate(Check_description= " OVC_VL Suppression > OVC_VL Eligible" )%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="81904")
+  check4_G2G<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
+    filter(check4==TRUE) %>%
+    mutate(Check_description= " OVC_VL Suppression > OVC_VL Eligible" )%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="81904")
   
   #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
   check5_G2G<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% 
+    filter(check5==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="81904")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="81904")
   
   #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
   
   check6_G2G<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>%
+    filter(check6==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="81904")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="81904")
   
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_G2G,"Dataout/OVC_DQRT_Feedback_G2G.xlsx",  sheetName="Check1",append=TRUE)
@@ -434,39 +489,56 @@ Date <- Sys.Date()
   #'[M2M Partner feedback]
   
   # Checking for missing data
-  Missing_data_M2M <-OutputTableau %>% filter(missing=="Yes") %>%    mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
-    filter(mech_code=="80004")%>% filter(period== reporting_period )
+  Missing_data_M2M <-OutputTableau %>% filter(missing=="Yes") %>%   
+    mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+    filter(mech_code=="80004")%>%
+    filter(period== reporting_period )
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
-  check1_M2M<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
-    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
+  check1_M2M<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% 
+    select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% 
+    filter(check1==TRUE) %>%
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="80004")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
   
   #Check 2:HIVSTAT More that OVC COMPREHENSIVE
-  check2_M2M<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
+  check2_M2M<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% 
+    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% 
+    filter(check2==TRUE) %>%   
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
     filter(mech_code=="80004")
   
   #Check 3:OVC VLS>OVC_VLR
   check3_M2M<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL_Result")%>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% filter(check3==TRUE) %>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
+    filter(check3==TRUE) %>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="80004")
   
   #Check 4:OVC_VLS > OVC_VL_ELIGIBLE
-  check4_M2M<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>%
+  check4_M2M<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>%
     filter(check4==TRUE) %>% mutate(Check_description= " OVC_VL Suppression > OVC_VL Eligible" )%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="80004")
   
   #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
   check5_M2M<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% 
+    filter(check5==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="80004")
   
   #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
   
-  check6_M2M<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
-    mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")
+    #Commented out code because M2M are only implementing DREAMS Family strengthening not CCM? 
+  
+  #check6_M2M<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
+   # select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    #mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
+    #mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80004")
   
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_M2M,"Dataout/OVC_DQRT_Feedback_M2M.xlsx",  sheetName="Check1",append=TRUE)
@@ -500,42 +572,57 @@ Date <- Sys.Date()
   #'[CINDI Partner feedback]
   
   #Checking for missing data
-  Missing_data_CINDI<-OutputTableau %>%filter(missing=="Yes")%>% mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+  Missing_data_CINDI<-OutputTableau %>%filter(missing=="Yes")%>% 
+    mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
     filter(mech_code=="70311")%>% filter(period== reporting_period )
   
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
-  check1_CINDI<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
-    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
+  check1_CINDI<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% 
+  select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="70311")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
   
   #Check 2:HIVSTAT More that OVC COMPREHENSIVE
-  check2_CINDI<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% 
-    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
+  check2_CINDI<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% 
+    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% 
+    filter(check2==TRUE) %>%  
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
     filter(mech_code=="70311")
   
   #Check 3:OVC_VLS > OVC_VLR
   check3_CINDI<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL Result")%>%
-    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% filter(check3==TRUE) %>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
+    filter(check3==TRUE) %>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="70311")
   
   #Check 4:OVC_VLS > OVC_VL_ELIGIBLE
-  check4_CINDI<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
-    filter(check4==TRUE) %>% mutate(Check_description=" OVC_VL Suppression > OVC_VL Eligible")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")
+  check4_CINDI<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
+    filter(check4==TRUE) %>%
+    mutate(Check_description=" OVC_VL Suppression > OVC_VL Eligible")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="70311")
   
   
   #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
   check5_CINDI<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>%
+    filter(check5==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="70311")
   
   #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
   
   check6_CINDI<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% 
+    filter(check6==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="70311")
   
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_CINDI,"Dataout/OVC_DQRT_Feedback_CINDI.xlsx",  sheetName="Check1",append=TRUE)
@@ -569,40 +656,55 @@ Date <- Sys.Date()
   
   #'[NACOSA Partner feedback]
   # Checking for missing data
-  Missing_data_NACOSA<-OutputTableau %>% filter(missing=="Yes") %>% mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+  Missing_data_NACOSA<-OutputTableau %>% filter(missing=="Yes") %>% 
+    mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
     filter(mech_code=="80008")%>% filter(period== reporting_period )
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
   check1_NACOSA<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% 
-    select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
-    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="80008")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
+    select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>%
+    filter(check1==TRUE) %>%
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="80008")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
   
   #Check 2:HIVSTAT More that OVC COMPREHENSIVE
-  check2_NACOSA<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% 
-    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
+  check2_NACOSA<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% 
+    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>%
+    filter(check2==TRUE) %>%   
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
     filter(mech_code=="80008")
   
   #Check 3:OVC VLS>OVC_VLR
-  check3_NACOSA<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL Result")%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
+  check3_NACOSA<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL Result")%>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
     filter(check3==TRUE) %>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80008")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="80008")
   
   #Check 4: OVC_VLS > OVC_VL_ELIGIBLE
-  check4_NACOSA<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>%
+  check4_NACOSA<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
+    filter(check4==TRUE) %>%
     mutate(Check_description= " OVC_VL Suppression > OVC_VL Eligible" )%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80008")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="80008")
   
   #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
   check5_NACOSA<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% 
+    filter(check5==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80008")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="80008")
   
   #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
     check6_NACOSA<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% 
+    filter(check6==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="80008")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="80008")
   
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_NACOSA,"Dataout/OVC_DQRT_Feedback_NACOSA.xlsx",  sheetName="Check1",append=TRUE)
@@ -635,38 +737,55 @@ Date <- Sys.Date()
   #'[MATCH Partner feedback]
   #
   # Checking for missing data
-  Missing_data_MATCH<-OutputTableau %>% filter(missing=="Yes") %>% mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
-    filter(mech_code=="87576")%>% filter(period== reporting_period )
+  Missing_data_MATCH<-OutputTableau %>% filter(missing=="Yes") %>% 
+    mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+    filter(mech_code=="87576")%>%
+    filter(period== reporting_period )
   
   #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
-  check1_MATCH<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
-    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="87576")
+  check1_MATCH<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% 
+    select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="87576")
   
   #Check 2:HIVSTAT More that OVC COMPREHENSIVE
-  check2_MATCH<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%  
+  check2_MATCH<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% 
+    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>%
+    filter(check2==TRUE) %>%  
     mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
     filter(mech_code=="87576")
   
   #Check 3:OVC VLS > OVC_VLR
-  check3_MATCH<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL Result")%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% filter(check3==TRUE) %>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87576")
+  check3_MATCH<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL Result")%>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
+    filter(check3==TRUE) %>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="87576")
   
   #Check 4: OVC_VLS > OVC_VL_ELIGIBLE
-  check4_MATCH<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% filter(check4==TRUE) %>% 
+  check4_MATCH<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
+    filter(check4==TRUE) %>% 
     mutate(Check_description= " OVC_VL Suppression > OVC_VL Eligible")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87576")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="87576")
   
   #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
   check5_MATCH<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% 
+    filter(check5==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87576")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="87576")
   
   #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
   check6_MATCH<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
-    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>%
+    filter(check6==TRUE)  %>%
     mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
-    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87576")
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="87576")
   
   #Creating workbook with separate worksheets to document the different L1 and L2 checks
   write.xlsx(check1_MATCH,"Dataout/OVC_DQRT_Feedback_MATCH.xlsx",  sheetName="Check1",append=TRUE)
@@ -695,79 +814,177 @@ Date <- Sys.Date()
   
   #'[MATCH END]
   #'
-  
-  #' 
+   
   #' #'[CHoiCe Partner feedback]
-  #' 
-  #' #Checking for missing data
-  #' Missing_data_CHoiCe<-OutputTableau %>%filter(missing=="Yes")%>% mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
-  #'   filter(mech_code=="87581")%>% filter(period== reporting_period )
-  #' 
-  #' 
-  #' #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
-  #' check1_CHoiCe<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
-  #'   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%  filter(mech_code=="70311")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
-  #' 
-  #' #Check 2:HIVSTAT More that OVC COMPREHENSIVE
-  #' check2_CHoiCe<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>% 
-  #'   mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% filter(check2==TRUE) %>%   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
-  #'   filter(mech_code=="87581")
-  #' 
-  #' #Check 3:OVC_VLS > OVC_VLR
-  #' check3_CHoiCe<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL Result")%>%
-  #'   select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% filter(check3==TRUE) %>%
-  #'   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87581")
-  #' 
-  #' #Check 4:OVC_VLS > OVC_VL_ELIGIBLE
-  #' check4_CHoiCe<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>% 
-  #'   filter(check4==TRUE) %>% mutate(Check_description=" OVC_VL Suppression > OVC_VL Eligible")%>%
-  #'   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87581")
-  #' 
-  #' 
-  #' #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
-  #' check5_CHoiCe<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>% 
-  #'   select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>% filter(check5==TRUE)  %>%
-  #'   mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
-  #'   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87581")
-  #' 
-  #' #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero 
-  #' 
-  #' check6_CHoiCe<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>% 
-  #'   select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% filter(check6==TRUE)  %>%
-  #'   mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
-  #'   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  filter(mech_code=="87581")
-  #' 
-  #' #Creating workbook with separate worksheets to document the different L1 and L2 checks
-  #' write.xlsx(check1_CHoiCe,"Dataout/OVC_DQRT_Feedback_CHoiCe.xlsx",  sheetName="Check1",append=TRUE)
-  #' 
-  #' wb<-loadWorkbook("Dataout/OVC_DQRT_Feedback_CHoiCe.xlsx")
-  #' 
-  #' addWorksheet(wb,"check2")
-  #' writeData(wb,sheet="check2",x=check2_CHoiCe)
-  #' 
-  #' addWorksheet(wb,"check3")
-  #' writeData(wb,sheet="check3",x=check3_CHoiCe)
-  #' 
-  #' addWorksheet(wb,"check4")
-  #' writeData(wb,sheet="check4",x=check4_CHoiCe)
-  #' 
-  #' addWorksheet(wb,"check5")
-  #' writeData(wb,sheet="check5",x=check5_CHoiCe)
-  #' 
-  #' addWorksheet(wb,"check6")
-  #' writeData(wb,sheet="check6",x=check6_CHoiCe)
-  #' 
-  #' 
-  #' addWorksheet(wb,sheetName = "Missing_Data")
-  #' writeData(wb,sheet = "Missing_Data",x=Missing_data_CINDI)
-  #' 
-  #' saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_CHoiCe.xlsx",overwrite = T)
+
+  #Checking for missing data
+  Missing_data_CHoiCe<-OutputTableau %>%filter(missing=="Yes")%>% 
+    mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+    filter(mech_code=="87581")%>%
+    filter(period== reporting_period )
+
+
+  #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
+  check1_CHoiCe<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% 
+    select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% 
+    filter(check1==TRUE) %>%
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
+    filter(mech_code=="87581")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
+
+  #Check 2:HIVSTAT More that OVC COMPREHENSIVE
+  check2_CHoiCe<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>%
+    mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% 
+    filter(check2==TRUE) %>% 
+    mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
+    filter(mech_code=="87581")
+
+  #Check 3:OVC_VLS > OVC_VLR
+  check3_CHoiCe<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL Result")%>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
+    filter(check3==TRUE) %>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+    filter(mech_code=="87581")
+
+  #Check 4:OVC_VLS > OVC_VL_ELIGIBLE
+  check4_CHoiCe<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>% 
+    select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>%
+    filter(check4==TRUE) %>% 
+    mutate(Check_description=" OVC_VL Suppression > OVC_VL Eligible")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="87581")
+
+
+  #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
+  check5_CHoiCe<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>%
+    filter(check5==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+    filter(mech_code=="87581")
+
+  #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero
+  check6_CHoiCe<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>%
+    select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% 
+    filter(check6==TRUE)  %>%
+    mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
+    mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+    filter(mech_code=="87581")
+
+  #Creating workbook with separate worksheets to document the different L1 and L2 checks
+  write.xlsx(check1_CHoiCe,"Dataout/OVC_DQRT_Feedback_CHoiCe.xlsx",  sheetName="Check1",append=TRUE)
+
+  wb<-loadWorkbook("Dataout/OVC_DQRT_Feedback_CHoiCe.xlsx")
+
+  addWorksheet(wb,"check2")
+  writeData(wb,sheet="check2",x=check2_CHoiCe)
+
+  addWorksheet(wb,"check3")
+  writeData(wb,sheet="check3",x=check3_CHoiCe)
+
+  addWorksheet(wb,"check4")
+  writeData(wb,sheet="check4",x=check4_CHoiCe)
+
+  addWorksheet(wb,"check5")
+  writeData(wb,sheet="check5",x=check5_CHoiCe)
+
+  addWorksheet(wb,"check6")
+  writeData(wb,sheet="check6",x=check6_CHoiCe)
+
+
+  addWorksheet(wb,sheetName = "Missing_Data")
+  writeData(wb,sheet = "Missing_Data",x=Missing_data_CHoiCe)
+
+  saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_CHoiCe.xlsx",overwrite = T)
   #' 
   #' #'[CHoiCe END]
   
   
+  #' #' #'[NICDAM Partner feedback]
+  #' 
+  #' #Checking for missing data
+  #' Missing_data_NICDAM<-OutputTableau %>%filter(missing=="Yes")%>%
+  #'   mutate(Dead_line="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%
+  #'   filter(mech_code=="87583")%>% filter(period== reporting_period )
+  #' 
+  #' 
+  #' #Check 1 :This looks at instances where there number Eligible for VL is more than those receiving ART .
+  #' check1_NICDAM<-level2 %>% mutate(check1=OVC_VL_ELIGIBLE>`OVC_HIVSTAT_Positive_Receiving ART`,checkdescription="Number eligible for VL is more than those receiving ART") %>% 
+  #'   select(primepartner,mech_code,psnu,community,period,age,`OVC_HIVSTAT_Positive_Receiving ART`,OVC_VL_ELIGIBLE ,check1,checkdescription) %>% filter(check1==TRUE) %>%
+  #'   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>% 
+  #'   filter(mech_code=="87583")# OVC_HIVSTAT_Pos_Rec ART <18<OVC_VL_ELIGIBLE <18
+  #' 
+  #' #Check 2:HIVSTAT More that OVC COMPREHENSIVE
+  #' check2_NICDAM<-level2 %>% mutate(check2=OVC_HIVSTAT>OVC_SERV_Comprehensive) %>%
+  #'   select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,OVC_HIVSTAT ,check2) %>%
+  #'   mutate(check_description="OVC_HIVSTAT is greater that OVC COMPREHENSIVE") %>% 
+  #'   filter(check2==TRUE) %>% 
+  #'   mutate(Deadline="", Status="", Partner_Comment="", Cleared_for_analytics="") %>%
+  #'   filter(mech_code=="87583")
+  #' 
+  #' #Check 3:OVC_VLS > OVC_VLR
+  #' check3_NICDAM<-level2 %>% mutate(check3=OVC_VLS>OVC_VLR ,checkdescription="OVC_VL Suppression >OVC_VL Result")%>%
+  #'   select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VLR ,check3,checkdescription) %>% 
+  #'   filter(check3==TRUE) %>%
+  #'   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+  #'   filter(mech_code=="87583")
+  #' 
+  #' #Check 4:OVC_VLS > OVC_VL_ELIGIBLE
+  #' check4_NICDAM<-level2 %>% mutate(check4=OVC_VLS>OVC_VL_ELIGIBLE )%>%
+  #'   select(primepartner,mech_code,psnu,community,period,age,OVC_VLS,OVC_VL_ELIGIBLE,check4) %>%
+  #'   filter(check4==TRUE) %>% mutate(Check_description=" OVC_VL Suppression > OVC_VL Eligible")%>%
+  #'   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+  #'   filter(mech_code=="87583")
+  #' 
+  #' 
+  #' #Check 5: This looks at instances where OVC Preventive is reported together with OVC_ELIGIBLE
+  #' check5_NICDAM<-level2 %>% mutate(check5 = OVC_SERV_Preventive >= OVC_VL_ELIGIBLE )  %>%
+  #'   select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Preventive,OVC_VL_ELIGIBLE,check5) %>%
+  #'   filter(check5==TRUE)  %>%
+  #'   mutate(Check_description=" OVC_SERV_Preventive & OVC_VL_ELIGIBLE reported together")%>%
+  #'   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>%  
+  #'   filter(mech_code=="87583")
+  #' 
+  #' #Check 6: This looks at instances where  OVC Serve Comprehensive is reported as zero
+  #' 
+  #' check6_NICDAM<-level2 %>% mutate(check6 = OVC_SERV_Comprehensive ==0 )  %>%
+  #'   select(primepartner,mech_code,psnu,community,period,age,OVC_SERV_Comprehensive,check6) %>% 
+  #'   filter(check6==TRUE)  %>%
+  #'   mutate(Check_description=" OVC_SERV_Comprehensive reported as zero")%>%
+  #'   mutate(Deadline="", Status="", Partners_Comments="", Cleared_for_analytics="") %>% 
+  #'   filter(mech_code=="87583")
+  #' 
+  #' #Creating workbook with separate worksheets to document the different L1 and L2 checks
+  #' write.xlsx(check1_NICDAM,"Dataout/OVC_DQRT_Feedback_NICDAM.xlsx",  sheetName="Check1",append=TRUE)
+  #' 
+  #' wb<-loadWorkbook("Dataout/OVC_DQRT_Feedback_NICDAM.xlsx")
+  #' 
+  #' addWorksheet(wb,"check2")
+  #' writeData(wb,sheet="check2",x=check2_NICDAM)
+  #' 
+  #' addWorksheet(wb,"check3")
+  #' writeData(wb,sheet="check3",x=check3_NICDAM)
+  #' 
+  #' addWorksheet(wb,"check4")
+  #' writeData(wb,sheet="check4",x=check4_NICDAM)
+  #' 
+  #' addWorksheet(wb,"check5")
+  #' writeData(wb,sheet="check5",x=check5_NICDAM)
+  #' 
+  #' addWorksheet(wb,"check6")
+  #' writeData(wb,sheet="check6",x=check6_NICDAM)
+  #' 
+  #' addWorksheet(wb,sheetName = "Missing_Data")
+  #' writeData(wb,sheet = "Missing_Data",x=Missing_data_NICDAM)
+  #' 
+  #' saveWorkbook(wb,"Dataout/OVC_DQRT_Feedback_NICDAM.xlsx",overwrite = T)
+  #' #' 
+  #' #' #'[NICDAM END]
+  #' 
+  
+  
   #'[OVC Dashboard output file]
-  #'
+  
   print(distinct(AllDatav1,primepartner,mech_code ))
   
   
